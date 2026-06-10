@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 
 type Item = {
@@ -42,6 +43,14 @@ export default function ShopPage() {
     if (typeof window === "undefined") return;
     setItems(getItems());
     setGoldPrice24_10g(Number(localStorage.getItem("goldPrice24_10g") ?? 0));
+
+    const handleItemsUpdated = () => setItems(getItems());
+    window.addEventListener("items-updated", handleItemsUpdated);
+    window.addEventListener("storage", handleItemsUpdated);
+    return () => {
+      window.removeEventListener("items-updated", handleItemsUpdated);
+      window.removeEventListener("storage", handleItemsUpdated);
+    };
   }, []);
 
   useEffect(() => {
@@ -67,7 +76,12 @@ export default function ShopPage() {
     <>
       <Header />
       <main className="container">
-        <h1 className="title">Shop — Designs</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+          <h1 className="title" style={{ margin: 0 }}>Shop — Designs</h1>
+          <Link href="/" className="btn btn-secondary" style={{ padding: "10px 14px" }}>
+            Home
+          </Link>
+        </div>
 
         <div style={{ marginBottom: 12 }}>
           <button className="btn" onClick={() => setFilter("All")} style={{ marginRight: 8 }}>

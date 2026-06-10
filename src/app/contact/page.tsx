@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Header from "@/components/Header";
 
 export default function ContactPage() {
@@ -5,7 +6,12 @@ export default function ContactPage() {
     <>
       <Header />
       <main className="container">
-        <h1 className="title">Contact Us</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+          <h1 className="title" style={{ margin: 0 }}>Contact Us</h1>
+          <Link href="/" className="btn btn-secondary" style={{ padding: "10px 14px" }}>
+            Home
+          </Link>
+        </div>
 
         <section className="card" style={{ padding: 16 }}>
           <p className="muted">Reach out to us for enquiries or custom orders.</p>

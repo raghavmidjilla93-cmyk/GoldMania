@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import HeroSlider from "@/components/HeroSlider";
 import { siteConfig } from "@/config/siteConfig";
@@ -71,12 +72,12 @@ export default function Home() {
       <Header />
 
       {/* Visible tab bar under header for quick navigation */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #eee" }}>
-        <div className="container" style={{ display: "flex", gap: 12, padding: "10px 0" }}>
-          <a href="/" style={{ padding: "8px 12px", textDecoration: "none", fontWeight: 700 }}>Home</a>
-          <a href="/shop" style={{ padding: "8px 12px", textDecoration: "none", fontWeight: 700 }}>Shop</a>
-          <a href="/contact" style={{ padding: "8px 12px", textDecoration: "none", fontWeight: 700 }}>Contact Us</a>
-          <a href="/admin" style={{ padding: "8px 12px", textDecoration: "none", fontWeight: 700 }}>Admin</a>
+      <div className="page-nav-bar">
+        <div className="container page-nav">
+          <Link href="/">Home</Link>
+          <Link href="/shop">Shop</Link>
+          <Link href="/contact">Contact</Link>
+          <Link href="/admin">Admin</Link>
         </div>
       </div>
 

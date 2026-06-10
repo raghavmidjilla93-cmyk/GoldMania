@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import { siteConfig } from "@/config/siteConfig";
 
@@ -82,6 +83,7 @@ export default function AdminPage() {
     setItems(next);
     if (typeof window !== "undefined") {
       localStorage.setItem("items", JSON.stringify(next));
+      window.dispatchEvent(new Event("items-updated"));
     }
     setForm({ name: "", metal: "Gold", weight: "0", wastage: "3" });
     setPreview(undefined);
@@ -100,7 +102,12 @@ export default function AdminPage() {
     <>
       <Header />
       <main className="container">
-        <h1 className="title">Admin</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+          <h1 className="title" style={{ margin: 0 }}>Admin</h1>
+          <Link href="/" className="btn btn-secondary" style={{ padding: "10px 14px" }}>
+            Home
+          </Link>
+        </div>
 
         {!loggedIn ? (
           <section className="card" style={{ padding: 16 }}>
