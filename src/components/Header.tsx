@@ -7,12 +7,23 @@ export default function Header() {
 
   return (
     <header className="site-header">
+      {/* Top Info Bar */}
+      <div style={{ backgroundColor: "#1e87a7", color: "white", padding: "8px 0", fontSize: 13 }}>
+        <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>📍 {siteConfig.address}</div>
+          <div style={{ display: "flex", gap: 16 }}>
+            <a href={`tel:${siteConfig.phone}`} style={{ color: "white", textDecoration: "none" }}>📞 {siteConfig.phone}</a>
+            <a href={`mailto:${siteConfig.email}`} style={{ color: "white", textDecoration: "none" }}>✉️ {siteConfig.email}</a>
+          </div>
+        </div>
+      </div>
+
       {/* Banner image */}
       <div
         style={{
           position: "relative",
           width: "100%",
-          height: 160, // ✅ smaller height (change to 160 if you want more small)
+          height: 180,
           overflow: "hidden",
         }}
       >
@@ -37,7 +48,7 @@ export default function Header() {
           }}
         />
 
-        {/* Center text (not too big) */}
+        {/* Center text */}
         <div
           style={{
             position: "absolute",
@@ -53,7 +64,7 @@ export default function Header() {
         >
           <div
             style={{
-              fontSize: "clamp(36px, 6vw, 56px)", // 2x larger (was clamp(18px,3vw,28px))
+              fontSize: "clamp(36px, 6vw, 56px)",
               fontWeight: 900,
               letterSpacing: 1.5,
               textShadow: "0 2px 12px rgba(0,0,0,0.6)",
@@ -65,17 +76,18 @@ export default function Header() {
           <div
             style={{
               marginTop: 6,
-              fontSize: 13,
+              fontSize: 14,
               color: "#f1f1f1",
               opacity: 0.95,
               textShadow: "0 2px 10px rgba(0,0,0,0.6)",
+              fontStyle: "italic",
             }}
           >
-            📞 {siteConfig.phone} &nbsp; • &nbsp; ✉ {siteConfig.email}
+            {siteConfig.tagline}
           </div>
 
-          {/* WhatsApp button */}
-          <div style={{ marginTop: 10 }}>
+          {/* Action buttons */}
+          <div style={{ marginTop: 14, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
             <a
               href={whatsappLink}
               target="_blank"
@@ -84,40 +96,69 @@ export default function Header() {
                 background: "#25D366",
                 color: "#fff",
                 textDecoration: "none",
-                padding: "9px 14px",
-                borderRadius: 999,
-                fontWeight: 900,
+                padding: "10px 18px",
+                borderRadius: 6,
+                fontWeight: 700,
                 fontSize: 13,
                 display: "inline-block",
-                boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
               }}
             >
-              WhatsApp
+              💬 WhatsApp Us
             </a>
+
+            <Link
+              href="/shop"
+              style={{
+                background: "#ffd700",
+                color: "#000",
+                textDecoration: "none",
+                padding: "10px 18px",
+                borderRadius: 6,
+                fontWeight: 700,
+                fontSize: 13,
+                display: "inline-block",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+              }}
+            >
+              🛍️ Shop Now
+            </Link>
           </div>
  
           {/* Navigation links */}
-          <nav style={{ marginTop: 14 }}>
-            <Link
-              href="/"
-              style={{
-                background: "#fff",
-                color: siteConfig.primaryColor,
-                margin: "0 10px",
-                fontWeight: 800,
-                padding: "8px 12px",
-                borderRadius: 999,
-                textDecoration: "none",
-                boxShadow: "0 6px 18px rgba(0,0,0,0.18)",
-              }}
-            >
-              Home
-            </Link>
-
-            <Link href="/shop" style={{ color: "#fff", margin: "0 10px", fontWeight: 700 }}>Shop</Link>
-            <Link href="/contact" style={{ color: "#fff", margin: "0 10px", fontWeight: 700 }}>Contact Us</Link>
-            <Link href="/admin" style={{ color: "#fff", margin: "0 10px", fontWeight: 700 }}>Admin</Link>
+          <nav style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Home</Link>
+            <Link href="/shop" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Shop</Link>
+            <Link href="/contact" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Contact</Link>
+            <Link href="/admin" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Admin</Link>
           </nav>
+        </div>
+      </div>
+
+      {/* Social Media Links Bar */}
+      <div style={{ backgroundColor: "#f9f9f9", padding: "12px 0", borderBottom: "1px solid #e0e0e0" }}>
+        <div className="container" style={{ display: "flex", justifyContent: "center", gap: 20, alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: "#666" }}>Follow us:</span>
+          {siteConfig.socialLinks.facebook && (
+            <a href={siteConfig.socialLinks.facebook} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none" }} title="Facebook">
+              f
+            </a>
+          )}
+          {siteConfig.socialLinks.instagram && (
+            <a href={siteConfig.socialLinks.instagram} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none" }} title="Instagram">
+              📷
+            </a>
+          )}
+          {siteConfig.socialLinks.twitter && (
+            <a href={siteConfig.socialLinks.twitter} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none" }} title="Twitter">
+              𝕏
+            </a>
+          )}
+          {siteConfig.socialLinks.youtube && (
+            <a href={siteConfig.socialLinks.youtube} target="_blank" rel="noreferrer" style={{ fontSize: 16, textDecoration: "none" }} title="YouTube">
+              ▶️
+            </a>
+          )}
         </div>
       </div>
     </header>

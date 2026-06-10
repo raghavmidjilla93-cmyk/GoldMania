@@ -171,29 +171,88 @@ export default function Home() {
           {/* After rates: Hero slider + Featured */}
           <HeroSlider />
 
-          <section className="card" style={{ padding: 16, marginTop: 12 }}>
-            <h2 className="center" style={{ marginTop: 0 }}>Featured Jewellery</h2>
+          {/* FEATURES SECTION */}
+          <section style={{ marginTop: 20 }}>
+            <h2 className="center" style={{ marginBottom: 16, fontSize: 24, fontWeight: 700 }}>Why Choose Us?</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+              {siteConfig.features.map((feature, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    padding: 16,
+                    backgroundColor: "#f9f9f9",
+                    borderRadius: 8,
+                    border: "1px solid #e0e0e0",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>{feature.icon}</div>
+                  <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 15 }}>{feature.title}</div>
+                  <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>{feature.description}</div>
+                </div>
+              ))}
+            </div>
+          </section>
 
-            <div className="feature-grid" style={{ marginTop: 12 }}>
-              <div className="feature-card">
-                <img src="/gold1.png" alt="Gold Bar" />
-                <div className="meta">
-                  <div>
-                    <div className="title">24K Gold Bar</div>
-                    <div className="muted" style={{ fontSize: 13 }}>10g approx. retail</div>
-                  </div>
-                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta">Enquire</a>
+          {/* FEATURED JEWELLERY GALLERY */}
+          <section className="card" style={{ padding: 16, marginTop: 20 }}>
+            <h2 className="center" style={{ marginTop: 0, marginBottom: 20, fontSize: 24, fontWeight: 700 }}>✨ Featured Collection</h2>
+
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gap: 16,
+            }}>
+              <div style={{
+                backgroundColor: "#fff",
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid #e0e0e0",
+                transition: "transform 0.3s, box-shadow 0.3s",
+              }}>
+                <img src="/gold1.png" alt="Gold Bar" style={{ width: "100%", height: 200, objectFit: "cover" }} />
+                <div style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>24K Gold Bar</div>
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Pure hallmarked gold • 10g approx.</div>
+                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
+                    📱 Enquire on WhatsApp
+                  </a>
                 </div>
               </div>
 
-              <div className="feature-card">
-                <img src="/gold3.jpg" alt="Necklace" />
-                <div className="meta">
-                  <div>
-                    <div className="title">Designer Necklace</div>
-                    <div className="muted" style={{ fontSize: 13 }}>Handcrafted jewellery</div>
-                  </div>
-                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta">Enquire</a>
+              <div style={{
+                backgroundColor: "#fff",
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid #e0e0e0",
+                transition: "transform 0.3s, box-shadow 0.3s",
+              }}>
+                <img src="/gold3.jpg" alt="Necklace" style={{ width: "100%", height: 200, objectFit: "cover" }} />
+                <div style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Designer Necklace</div>
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Handcrafted 22K • Premium design</div>
+                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
+                    📱 Enquire on WhatsApp
+                  </a>
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: "#fff",
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid #e0e0e0",
+                transition: "transform 0.3s, box-shadow 0.3s",
+              }}>
+                <div style={{ width: "100%", height: 200, backgroundColor: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>
+                  💍
+                </div>
+                <div style={{ padding: 12 }}>
+                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Custom Designs</div>
+                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Create your unique jewelry • Any design</div>
+                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
+                    📱 Get Free Quote
+                  </a>
                 </div>
               </div>
             </div>
