@@ -24,6 +24,21 @@ function getItems(): Item[] {
   }
 }
 
+function readManualRates(): { gold24_10g: number } | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("manualRates");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && Number.isFinite(parsed.gold24_10g) && parsed.gold24_10g > 0) {
+      return { gold24_10g: parsed.gold24_10g };
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 function sampleItems(): Item[] {
   return [
     { id: "g1", name: "Gold Patteellu (Ankle)", metal: "Gold", weightGrams: 5, wastagePercent: 3 },
@@ -38,18 +53,31 @@ export default function ShopPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [filter, setFilter] = useState<"All" | "Gold" | "Silver">("All");
   const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(0);
+  const [manualGold24_10g, setManualGold24_10g] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     setItems(getItems());
     setGoldPrice24_10g(Number(localStorage.getItem("goldPrice24_10g") ?? 0));
+    const manual = readManualRates();
+    if (manual) {
+      setManualGold24_10g(manual.gold24_10g);
+    }
 
     const handleItemsUpdated = () => setItems(getItems());
+    const handleRatesUpdated = () => {
+      const manualNext = readManualRates();
+      if (manualNext) {
+        setManualGold24_10g(manualNext.gold24_10g);
+      }
+    };
     window.addEventListener("items-updated", handleItemsUpdated);
     window.addEventListener("storage", handleItemsUpdated);
+    window.addEventListener("rates-updated", handleRatesUpdated);
     return () => {
       window.removeEventListener("items-updated", handleItemsUpdated);
       window.removeEventListener("storage", handleItemsUpdated);
+      window.removeEventListener("rates-updated", handleRatesUpdated);
     };
   }, []);
 
@@ -64,7 +92,8 @@ export default function ShopPage() {
 
   function priceFor(item: Item) {
     if (item.metal === "Gold") {
-      const perGram = goldPrice24_10g > 0 ? goldPrice24_10g / 10 : 0;
+      const priceBase = manualGold24_10g && manualGold24_10g > 0 ? manualGold24_10g : goldPrice24_10g;
+      const perGram = priceBase > 0 ? priceBase / 10 : 0;
       const w = item.wastagePercent ?? 0;
       return perGram * item.weightGrams * (1 + w / 100);
     }

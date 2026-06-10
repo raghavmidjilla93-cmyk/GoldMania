@@ -23,9 +23,37 @@ type ApiData = {
   };
 };
 
+type ManualRates = {
+  gold24_10g: number;
+  gold22_10g: number;
+  gold18_10g: number;
+  silver999_1kg: number;
+};
+
 export default function Home() {
   const [data, setData] = useState<ApiData | null>(null);
   const [error, setError] = useState<string>("");
+  const [manualRatesActive, setManualRatesActive] = useState(false);
+
+  function readManualRates(): ManualRates | null {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem("manualRates");
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as ManualRates;
+      if (
+        parsed &&
+        [parsed.gold24_10g, parsed.gold22_10g, parsed.gold18_10g, parsed.silver999_1kg].every(
+          (value) => Number.isFinite(value) && value > 0,
+        )
+      ) {
+        return parsed;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
 
   async function loadRates() {
     try {
@@ -39,7 +67,26 @@ export default function Home() {
         return;
       }
 
-      setData(json);
+      const manualRates = readManualRates();
+      if (manualRates) {
+        setManualRatesActive(true);
+        setData({
+          ...json,
+          note: "Manual exact rates active",
+          prices: {
+            gold: [
+              { purity: "Spot", amount: json.prices.gold[0]?.amount ?? 0 },
+              { purity: "24K", amount: manualRates.gold24_10g },
+              { purity: "22K", amount: manualRates.gold22_10g },
+              { purity: "18K", amount: manualRates.gold18_10g },
+            ],
+            silver: [{ purity: "999", amount: manualRates.silver999_1kg }],
+          },
+        });
+      } else {
+        setManualRatesActive(false);
+        setData(json);
+      }
     } catch (e: any) {
       setError(e?.message ?? "Network error");
       setData(null);
@@ -48,8 +95,19 @@ export default function Home() {
 
   useEffect(() => {
     loadRates();
+    const handleRatesUpdated = () => loadRates();
+    if (typeof window !== "undefined") {
+      window.addEventListener("rates-updated", handleRatesUpdated);
+      window.addEventListener("storage", handleRatesUpdated);
+    }
     const t = setInterval(loadRates, 10 * 60_000); // every 10 mins
-    return () => clearInterval(t);
+    return () => {
+      clearInterval(t);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("rates-updated", handleRatesUpdated);
+        window.removeEventListener("storage", handleRatesUpdated);
+      }
+    };
   }, []);
 
   const gold = useMemo(() => data?.prices?.gold ?? [], [data]);
@@ -91,6 +149,11 @@ export default function Home() {
           <div style={{ marginTop: 6, fontSize: 13 }}>
             {data?.city ? `${data.city} • ` : ""}{data?.note ?? ""}
           </div>
+          {manualRatesActive ? (
+            <div style={{ marginTop: 6, fontSize: 12, color: "#1e7f37" }}>
+              Exact admin-saved rates are active on this page.
+            </div>
+          ) : null}
         </div>
 
         {error ? <div className="error">{error}</div> : null}
