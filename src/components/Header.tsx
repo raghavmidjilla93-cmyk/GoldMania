@@ -1,7 +1,11 @@
+"use client";
+
 import { siteConfig } from "@/config/siteConfig";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
+  const pathname = usePathname();
   const wa = siteConfig.whatsapp.replace(/\D/g, "");
   const whatsappLink = `https://wa.me/${wa}`;
 
@@ -126,11 +130,29 @@ export default function Header() {
           </div>
  
           {/* Navigation links */}
-          <nav style={{ marginTop: 14, display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-            <Link href="/" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Home</Link>
-            <Link href="/shop" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Shop</Link>
-            <Link href="/contact" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Contact</Link>
-            <Link href="/admin" style={{ color: "#fff", fontWeight: 700, textDecoration: "none" }}>Admin</Link>
+          <nav style={{ marginTop: 14, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            {[
+              { href: "/", label: "Home" },
+              { href: "/shop", label: "Shop" },
+              { href: "/contact", label: "Contact" },
+              { href: "/admin", label: "Admin" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  color: pathname === item.href ? "#1e87a7" : "#fff",
+                  background: pathname === item.href ? "#fff" : "rgba(255,255,255,0.16)",
+                  padding: "8px 14px",
+                  borderRadius: 999,
+                  fontWeight: 700,
+                  textDecoration: "none",
+                  boxShadow: pathname === item.href ? "0 4px 16px rgba(0,0,0,0.12)" : "none",
+                }}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
         </div>
       </div>

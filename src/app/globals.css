@@ -99,8 +99,17 @@ h1.title {
   border: 1px solid rgba(15,23,42,0.08);
   background: transparent;
 }
-.btn { padding: 12px; border-radius: 10px; cursor: pointer; border: none; font-weight: 800; }
+.btn { padding: 12px; border-radius: 10px; cursor: pointer; border: none; font-weight: 800; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
 .btn-primary { background: var(--primary); color: white; }
+.btn-secondary { background: white; color: var(--primary); border: 1px solid rgba(14,165,164,0.3); }
+
+.page-nav-bar { background: #fff; border-bottom: 1px solid rgba(15,23,42,0.08); }
+.page-nav { display: flex; justify-content: center; gap: 12px; padding: 10px 0; flex-wrap: wrap; }
+.page-nav a { color: var(--fg); font-weight: 700; padding: 10px 14px; border-radius: 999px; text-decoration: none; background: rgba(14,165,164,0.08); }
+.page-nav a:hover { background: rgba(14,165,164,0.14); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 
 /* Header */
 .site-header { border-bottom: 2px solid var(--accent); background: transparent; }

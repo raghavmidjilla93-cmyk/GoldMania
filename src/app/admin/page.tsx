@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import Header from "@/components/Header";
 import { siteConfig } from "@/config/siteConfig";
 
@@ -13,6 +14,13 @@ type Item = {
   wastagePercent?: number;
 };
 
+type ManualRates = {
+  gold24_10g: number;
+  gold22_10g: number;
+  gold18_10g: number;
+  silver999_1kg: number;
+};
+
 function readItems(): Item[] {
   if (typeof window === "undefined") return [];
   try {
@@ -22,12 +30,34 @@ function readItems(): Item[] {
   }
 }
 
+function readManualRates(): ManualRates | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem("manualRates");
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as ManualRates;
+    if (
+      parsed &&
+      [parsed.gold24_10g, parsed.gold22_10g, parsed.gold18_10g, parsed.silver999_1kg].every(
+        (value) => Number.isFinite(value) && value > 0,
+      )
+    ) {
+      return parsed;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export default function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [items, setItems] = useState<Item[]>([]);
   const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(0);
+  const [manualRateForm, setManualRateForm] = useState({ gold24: "", gold22: "", gold18: "", silver: "" });
+  const [manualRates, setManualRates] = useState<ManualRates | null>(null);
   const [form, setForm] = useState({ name: "", metal: "Gold", weight: "0", wastage: "3" });
   const [preview, setPreview] = useState<string | undefined>(undefined);
   const [adminUser, setAdminUser] = useState("admin");
@@ -39,6 +69,16 @@ export default function AdminPage() {
     setGoldPrice24_10g(Number(localStorage.getItem("goldPrice24_10g") ?? 0));
     setAdminUser(localStorage.getItem("adminUser") ?? "admin");
     setAdminPass(localStorage.getItem("adminPass") ?? "admin");
+    const existingManualRates = readManualRates();
+    if (existingManualRates) {
+      setManualRates(existingManualRates);
+      setManualRateForm({
+        gold24: String(existingManualRates.gold24_10g),
+        gold22: String(existingManualRates.gold22_10g),
+        gold18: String(existingManualRates.gold18_10g),
+        silver: String(existingManualRates.silver999_1kg),
+      });
+    }
   }, []);
 
   function login() {
@@ -52,8 +92,23 @@ export default function AdminPage() {
   function saveGoldPrice() {
     if (typeof window !== "undefined") {
       localStorage.setItem("goldPrice24_10g", String(goldPrice24_10g));
+      window.dispatchEvent(new Event("rates-updated"));
     }
     alert("Saved gold 24K price");
+  }
+
+  function saveManualRates() {
+    if (typeof window === "undefined") return;
+    const next: ManualRates = {
+      gold24_10g: Number(manualRateForm.gold24) || 0,
+      gold22_10g: Number(manualRateForm.gold22) || 0,
+      gold18_10g: Number(manualRateForm.gold18) || 0,
+      silver999_1kg: Number(manualRateForm.silver) || 0,
+    };
+    localStorage.setItem("manualRates", JSON.stringify(next));
+    setManualRates(next);
+    window.dispatchEvent(new Event("rates-updated"));
+    alert("Saved exact manual rates");
   }
 
   function onFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -82,6 +137,7 @@ export default function AdminPage() {
     setItems(next);
     if (typeof window !== "undefined") {
       localStorage.setItem("items", JSON.stringify(next));
+      window.dispatchEvent(new Event("items-updated"));
     }
     setForm({ name: "", metal: "Gold", weight: "0", wastage: "3" });
     setPreview(undefined);
@@ -100,7 +156,12 @@ export default function AdminPage() {
     <>
       <Header />
       <main className="container">
-        <h1 className="title">Admin</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+          <h1 className="title" style={{ margin: 0 }}>Admin</h1>
+          <Link href="/" className="btn btn-secondary" style={{ padding: "10px 14px" }}>
+            Home
+          </Link>
+        </div>
 
         {!loggedIn ? (
           <section className="card" style={{ padding: 16 }}>
@@ -118,7 +179,54 @@ export default function AdminPage() {
               <div style={{ display: "grid", gap: 8 }}>
                 <label>Gold 24K Price (₹ per 10g)</label>
                 <input className="input" type="number" value={goldPrice24_10g || ""} onChange={(e) => setGoldPrice24_10g(Number(e.target.value))} />
-                <button className="btn" onClick={saveGoldPrice}>Save</button>
+                <button className="btn" onClick={saveGoldPrice}>Save Gold Price</button>
+
+                <hr />
+                <h3 style={{ marginTop: 12 }}>Exact Rates Override</h3>
+                <p style={{ fontSize: 13, color: "#555", margin: 0 }}>Enter exact rates to match the live site. These values will override API-derived rates.</p>
+                <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <label className="input-label">24K Gold (₹ per 10g)</label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={manualRateForm.gold24}
+                      onChange={(e) => setManualRateForm({ ...manualRateForm, gold24: e.target.value })}
+                      placeholder="e.g. 150500"
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <label className="input-label">22K Gold (₹ per 10g)</label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={manualRateForm.gold22}
+                      onChange={(e) => setManualRateForm({ ...manualRateForm, gold22: e.target.value })}
+                      placeholder="e.g. 136750"
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <label className="input-label">18K Gold (₹ per 10g)</label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={manualRateForm.gold18}
+                      onChange={(e) => setManualRateForm({ ...manualRateForm, gold18: e.target.value })}
+                      placeholder="e.g. 111375"
+                    />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <label className="input-label">Silver 999 (₹ per 1kg)</label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={manualRateForm.silver}
+                      onChange={(e) => setManualRateForm({ ...manualRateForm, silver: e.target.value })}
+                      placeholder="e.g. 242500"
+                    />
+                  </div>
+                </div>
+                <button className="btn" onClick={saveManualRates} style={{ marginTop: 8 }}>Save Exact Rates</button>
 
                 <hr />
                 <label>Admin credentials</label>
