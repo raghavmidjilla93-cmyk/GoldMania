@@ -6,14 +6,14 @@
 
 export const siteConfig = {
   // ===== BRANDING =====
-  brandName: "Sri Venkateshwara Jewellers",
+  brandName: "Gold Mania ",
   tagline: "Real-time Gold & Silver Rates | Hyderabad",
   description: "Find live gold and silver rates for Hyderabad, India. Premium jewelry with certified purity.",
 
   // ===== CONTACT INFORMATION =====
-  phone: "+91 9014498917",
-  email: "support@vamshiraghava.com",
-  whatsapp: "+91 9014498917",
+  phone: "+91 7981757384",
+  email: "karthikmidjilla@gmail.com",
+  whatsapp: "+91 7981757384",
   address: "Hyderabad, Telangana",
 
   // ===== COLORS & STYLING =====
@@ -121,6 +121,6 @@ export const siteConfig = {
   // Change these in the .env.local file or in the admin panel
   adminSettings: {
     defaultUsername: "admin",
-    defaultPassword: "admin",
+    defaultPassword: "admin123",
   },
 };
