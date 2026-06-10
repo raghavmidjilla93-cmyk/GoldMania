@@ -14,6 +14,7 @@ type Item = {
 };
 
 function readItems(): Item[] {
+  if (typeof window === "undefined") return [];
   try {
     return JSON.parse(localStorage.getItem("items") ?? "[]");
   } catch {
@@ -26,18 +27,22 @@ export default function AdminPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [items, setItems] = useState<Item[]>([]);
-  const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(() => Number(localStorage.getItem("goldPrice24_10g") ?? 0));
+  const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(0);
   const [form, setForm] = useState({ name: "", metal: "Gold", weight: "0", wastage: "3" });
   const [preview, setPreview] = useState<string | undefined>(undefined);
+  const [adminUser, setAdminUser] = useState("admin");
+  const [adminPass, setAdminPass] = useState("admin");
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     setItems(readItems());
+    setGoldPrice24_10g(Number(localStorage.getItem("goldPrice24_10g") ?? 0));
+    setAdminUser(localStorage.getItem("adminUser") ?? "admin");
+    setAdminPass(localStorage.getItem("adminPass") ?? "admin");
   }, []);
 
   function login() {
-    const storedUser = localStorage.getItem("adminUser") ?? "admin";
-    const storedPass = localStorage.getItem("adminPass") ?? "admin";
-    if (username === storedUser && password === storedPass) {
+    if (username === adminUser && password === adminPass) {
       setLoggedIn(true);
     } else {
       alert("Incorrect username or password");
@@ -45,7 +50,9 @@ export default function AdminPage() {
   }
 
   function saveGoldPrice() {
-    localStorage.setItem("goldPrice24_10g", String(goldPrice24_10g));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("goldPrice24_10g", String(goldPrice24_10g));
+    }
     alert("Saved gold 24K price");
   }
 
@@ -73,7 +80,9 @@ export default function AdminPage() {
     };
     const next = [it, ...items];
     setItems(next);
-    localStorage.setItem("items", JSON.stringify(next));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("items", JSON.stringify(next));
+    }
     setForm({ name: "", metal: "Gold", weight: "0", wastage: "3" });
     setPreview(undefined);
   }
@@ -114,8 +123,31 @@ export default function AdminPage() {
                 <hr />
                 <label>Admin credentials</label>
                 <div style={{ display: "flex", gap: 8 }}>
-                  <input className="input" placeholder="Username" defaultValue={localStorage.getItem("adminUser") ?? "admin"} onChange={(e) => localStorage.setItem("adminUser", e.target.value)} />
-                  <input className="input" placeholder="Password" defaultValue={localStorage.getItem("adminPass") ?? "admin"} onChange={(e) => localStorage.setItem("adminPass", e.target.value)} />
+                  <input
+                    className="input"
+                    placeholder="Username"
+                    value={adminUser}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setAdminUser(next);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("adminUser", next);
+                      }
+                    }}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Password"
+                    type="password"
+                    value={adminPass}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setAdminPass(next);
+                      if (typeof window !== "undefined") {
+                        localStorage.setItem("adminPass", next);
+                      }
+                    }}
+                  />
                 </div>
               </div>
             </section>

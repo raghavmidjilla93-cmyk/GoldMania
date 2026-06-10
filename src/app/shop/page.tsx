@@ -13,6 +13,7 @@ type Item = {
 };
 
 function getItems(): Item[] {
+  if (typeof window === "undefined") return sampleItems();
   try {
     const raw = localStorage.getItem("items");
     if (!raw) return sampleItems();
@@ -35,15 +36,16 @@ function sampleItems(): Item[] {
 export default function ShopPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [filter, setFilter] = useState<"All" | "Gold" | "Silver">("All");
-  const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(() => {
-    return Number(localStorage.getItem("goldPrice24_10g") ?? 0);
-  });
+  const [goldPrice24_10g, setGoldPrice24_10g] = useState<number>(0);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     setItems(getItems());
+    setGoldPrice24_10g(Number(localStorage.getItem("goldPrice24_10g") ?? 0));
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     localStorage.setItem("goldPrice24_10g", String(goldPrice24_10g));
   }, [goldPrice24_10g]);
 
