@@ -52,13 +52,13 @@ export default function ShopPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Items
-    try {
-      const raw = localStorage.getItem("items");
-      setItems(raw ? JSON.parse(raw) : defaultItems());
-    } catch { setItems(defaultItems()); }
+    // Items — always from server API so all devices see the same products
+    fetch("/api/items", { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => Array.isArray(data) ? setItems(data) : setItems(defaultItems()))
+      .catch(() => setItems(defaultItems()));
 
-    // Rates: prefer manual override, else fetch from API
+    // Rates: prefer localStorage manual override, else fetch live from API
     function applyRates() {
       try {
         const m = JSON.parse(localStorage.getItem("manualRates") ?? "{}");
@@ -68,34 +68,25 @@ export default function ShopPage() {
           return;
         }
       } catch {}
-      // fetch live rate
       fetch("/api/rates", { cache: "no-store" })
         .then(r => r.json())
         .then(data => {
           const g24 = data?.prices?.gold?.find((r: any) => r.purity === "24K")?.amount ?? 0;
           const sil = data?.prices?.silver?.[0]?.amount ?? 0;
           if (g24 > 0) setGold24_10g(g24);
-          if (sil > 0) setSilverPerKg(sil); // per kg from API
+          if (sil > 0) setSilverPerKg(sil);
         })
         .catch(() => {});
     }
 
     applyRates();
 
-    const onUpdate = () => {
-      try {
-        const raw = localStorage.getItem("items");
-        setItems(raw ? JSON.parse(raw) : defaultItems());
-      } catch {}
-      applyRates();
-    };
-    window.addEventListener("items-updated", onUpdate);
-    window.addEventListener("rates-updated", onUpdate);
-    window.addEventListener("storage", onUpdate);
+    const onRatesUpdate = () => applyRates();
+    window.addEventListener("rates-updated", onRatesUpdate);
+    window.addEventListener("storage", onRatesUpdate);
     return () => {
-      window.removeEventListener("items-updated", onUpdate);
-      window.removeEventListener("rates-updated", onUpdate);
-      window.removeEventListener("storage", onUpdate);
+      window.removeEventListener("rates-updated", onRatesUpdate);
+      window.removeEventListener("storage", onRatesUpdate);
     };
   }, []);
 
