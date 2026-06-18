@@ -1,86 +1,75 @@
+/**
+ * Gold Rate API — Hyderabad
+ *
+ * Priority order:
+ *  1. goodreturns.in  — live Hyderabad retail rates (scrape)
+ *  2. IBJA            — India Bullion & Jewellers Association (scrape)
+ *  3. goldapi.io      — international spot × Indian multiplier (fallback)
+ *
+ * Response shape expected by page.tsx:
+ * {
+ *   updatedAt: string,
+ *   city: string,
+ *   source: string,
+ *   prices: {
+ *     gold:   [{purity, amount}],
+ *     silver: [{purity, amount}]
+ *   }
+ * }
+ */
+
 const OZ_TO_GRAM = 31.1034768;
 
-function sleep(ms: number) {
-  return new Promise((res) => setTimeout(res, ms));
-}
-
-async function fetchGoldAPI(metal: "XAU" | "XAG") {
-  const key = process.env.GOLDAPI_KEY;
-  if (!key) throw new Error("Missing GOLDAPI_KEY in .env.local");
-
-  const url = `https://www.goldapi.io/api/${metal}/INR`;
-
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      "x-access-token": key,
-      "Content-Type": "application/json",
-    },
-    next: { revalidate: 60 * 60 * 24 }, // 1/day
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`GoldAPI failed ${res.status}: ${text}`);
-  }
-
-  return res.json();
-}
+// ── in-memory cache ───────────────────────────────────────────────────────────
+let cache: {
+  result: any;
+  ts: number;
+} | null = null;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 function r2(n: number) {
-  return Math.round(n * 100) / 100;
+  return Math.round(n); // round to nearest rupee
 }
 
-export async function GET() {
+// ── helpers ───────────────────────────────────────────────────────────────────
+function parseAmount(s: string): number {
+  return parseFloat(s.replace(/[,\s₹]/g, ""));
+}
+
+// ── SOURCE 1: goodreturns.in ──────────────────────────────────────────────────
+async function scrapeGoodReturns(): Promise<{
+  gold24: number; gold22: number; gold18: number; silver: number;
+} | null> {
   try {
-    const goldMult = Number(process.env.HYD_GOLD_MULTIPLIER ?? "1.08");
-    const silverMult = Number(process.env.HYD_SILVER_MULTIPLIER ?? "1.06");
+    const res = await fetch(
+      "https://www.goodreturns.in/gold-rates-in-hyderabad.html",
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml",
+          "Accept-Language": "en-IN,en;q=0.9",
+        },
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
 
-    if (!Number.isFinite(goldMult) || goldMult <= 0) throw new Error("HYD_GOLD_MULTIPLIER invalid");
-    if (!Number.isFinite(silverMult) || silverMult <= 0) throw new Error("HYD_SILVER_MULTIPLIER invalid");
+    if (!res.ok) return null;
+    const html = await res.text();
 
-    // Fetch Gold then Silver (avoid 429)
-    const gold = await fetchGoldAPI("XAU");
-    await sleep(1100);
-    const silver = await fetchGoldAPI("XAG");
-
-    // GoldAPI returns INR per troy ounce → convert to INR per gram
-    const goldSpotPerGram = gold.price / OZ_TO_GRAM;
-    const silverSpotPerGram = silver.price / OZ_TO_GRAM;
-
-    // Apply Hyderabad retail multipliers
-    const goldRetailPerGram24 = goldSpotPerGram * goldMult;
-    const goldRetailPerGram22 = goldRetailPerGram24 * (22 / 24);
-    const goldRetailPerGram18 = goldRetailPerGram24 * (18 / 24);
-
-    const silverRetailPerGram = silverSpotPerGram * silverMult;
-
-    // Units you requested
-    const gold24_10g = goldRetailPerGram24 * 10;
-    const gold22_10g = goldRetailPerGram22 * 10;
-    const gold18_10g = goldRetailPerGram18 * 10;
-
-    const silver_1kg = silverRetailPerGram * 1000;
-
-    return Response.json({
-      updatedAt: new Date().toISOString(),
-      city: "Hyderabad",
-      note: "Hyderabad Retail (Approx.)",
-      units: {
-        gold: "₹ per 10 grams",
-        silver: "₹ per 1 kg",
-      },
-      prices: {
-        gold: [
-          { purity: "Spot", amount: r2(goldSpotPerGram * 10) },
-          { purity: "24K", amount: r2(gold24_10g) },
-          { purity: "22K", amount: r2(gold22_10g) },
-          { purity: "18K", amount: r2(gold18_10g) },
-        ],
-        silver: [{ purity: "999", amount: r2(silver_1kg) }],
-      },
-    });
-  } catch (e: any) {
-    return Response.json({ error: e?.message ?? "Unknown error" }, { status: 500 });
-  }
-}
+    // goodreturns.in embeds rates in structured HTML tables and spans.
+    // Try JSON-LD first (most reliable)
+    const jsonldMatch = html.match(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+    if (jsonldMatch) {
+      for (const block of jsonldMatch) {
+        try {
+          const inner = block.replace(/<script[^>]*>/, "").replace(/<\/script>/, "");
+          const obj = JSON.parse(inner);
+          // check for gold price data
+          if (obj?.offers?.price || obj?.price) {
+            const p = parseAmount(String(obj?.offers?.price || obj?.price));
+            if (p > 50000) {
+              // likely 22K per 10g
+              const gold22 = p;
+              const gold24 = Math.round(gold22 / (22 / 24));
+ 

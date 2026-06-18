@@ -6,9 +6,9 @@
 
 export const siteConfig = {
   // ===== BRANDING =====
-  brandName: "Gold Mania ",
-  tagline: "Real-time Gold & Silver Rates | Hyderabad",
-  description: "Find live gold and silver rates for Hyderabad, India. Premium jewelry with certified purity.",
+  brandName: "Gold Mania",
+  tagline: "Where Gold Meets Luxury · Hyderabad",
+  description: "Hyderabad's trusted destination for live gold & silver rates, BIS hallmarked jewellery, and bespoke designs crafted to perfection.",
 
   // ===== CONTACT INFORMATION =====
   phone: "+91 7981757384",
@@ -22,7 +22,7 @@ export const siteConfig = {
   accentColor: "#c0c0c0",       // Silver accent
 
   // ===== IMAGES =====
-  bannerUrl: "/banner.png",
+  bannerUrl: "/gold3.jpg",
   logoUrl: "/logo.png",
 
   // ===== RATES & UPDATES =====
@@ -49,59 +49,61 @@ export const siteConfig = {
   },
 
   // ===== HERO SLIDER IMAGES =====
-  // Add or edit images in the public/ folder and reference them here
   heroImages: [
     {
       url: "/gold1.png",
-      title: "Premium Gold Jewelry",
-      subtitle: "22K & 24K Certified Gold",
+      label: "PURE GOLD · 24K",
+      title: "Hyderabad's Finest Gold",
+      subtitle: "BIS Hallmarked · Certified Purity · Zero Compromise",
       cta: "View Collection",
     },
     {
       url: "/gold3.jpg",
-      title: "Silver Designs",
-      subtitle: "Pure 999 Silver Collection",
-      cta: "Explore Silver",
+      label: "DESIGNER · 22K",
+      title: "Crafted for Royalty",
+      subtitle: "Handcrafted Jewellery · Custom Orders Welcome",
+      cta: "Enquire on WhatsApp",
     },
     {
       url: "/banner.png",
-      title: "Live Rate Updates",
-      subtitle: "Real-time Prices - Always Accurate",
-      cta: "Check Rates",
+      label: "LIVE RATES · DAILY",
+      title: "Transparent Pricing",
+      subtitle: "Rate Shown = Rate You Pay · No Hidden Charges",
+      cta: "Today's Rates",
     },
   ],
 
   // ===== WEBSITE FEATURES =====
   features: [
     {
-      icon: "⏱️",
-      title: "Live Updates",
-      description: "Real-time gold & silver rates updated every 10 minutes",
+      icon: "◆",
+      title: "Live Market Rates",
+      description: "Gold & silver rates updated every 10 minutes from IBJA and Hyderabad market",
     },
     {
-      icon: "🏆",
-      title: "Certified Quality",
-      description: "100% authentic hallmarked jewelry with certificates",
+      icon: "◈",
+      title: "BIS Hallmarked",
+      description: "Every piece Government certified — 22K, 18K, 14K with full purity guarantee",
     },
     {
-      icon: "💳",
-      title: "Easy Transactions",
-      description: "Secure payment options for your peace of mind",
+      icon: "◇",
+      title: "Custom Jewellery",
+      description: "Bespoke designs made to your exact vision — bridal sets, rings, chains and more",
     },
     {
-      icon: "📱",
-      title: "Mobile Friendly",
-      description: "Shop anytime, anywhere on any device",
+      icon: "◉",
+      title: "Transparent Pricing",
+      description: "Zero hidden charges — rate shown on site is exactly what you pay at counter",
     },
     {
-      icon: "🚚",
-      title: "Fast Delivery",
-      description: "Quick and reliable delivery service",
+      icon: "♦",
+      title: "Trusted Since 2000",
+      description: "Over two decades serving Hyderabad families with trust, quality and fair prices",
     },
     {
-      icon: "🔒",
-      title: "Secure & Safe",
-      description: "Encrypted transactions and data protection",
+      icon: "✦",
+      title: "WhatsApp Enquiry",
+      description: "Get instant quotes, rate alerts and consultations directly on WhatsApp",
     },
   ],
 
@@ -111,16 +113,4 @@ export const siteConfig = {
   // ===== PURITY OPTIONS =====
   goldPurities: [
     { name: "24K", percentage: 99.9, description: "Pure Gold" },
-    { name: "22K", percentage: 91.6, description: "Indian Standard" },
-    { name: "18K", percentage: 75, description: "Mixed Metal" },
-  ],
-
-  // ===== ADMIN SETTINGS =====
-  // Default admin username: admin
-  // Default admin password: admin
-  // Change these in the .env.local file or in the admin panel
-  adminSettings: {
-    defaultUsername: "admin",
-    defaultPassword: "admin123",
-  },
-};
+    { name: "22K", percentage: 91.6, description: "Indian Standard"
