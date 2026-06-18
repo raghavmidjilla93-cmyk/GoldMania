@@ -3,361 +3,382 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
-import HeroSlider from "@/components/HeroSlider";
+import Footer from "@/components/Footer";
 import { siteConfig } from "@/config/siteConfig";
 
-type GoldPrice = { purity: string; amount: number };
-type SilverPrice = { purity: "999"; amount: number };
-
+type RateRow   = { purity: string; amount: number };
 type ApiData = {
-  updatedAt: string;
-  city?: string;
-  note?: string;
-  units?: {
-    gold?: string; // ₹ per 10 grams
-    silver?: string; // ₹ per 1 kg
-  };
-  prices: {
-    gold: GoldPrice[];
-    silver: SilverPrice[];
-  };
+  updatedAt: string; city?: string; note?: string; source?: string;
+  prices:    { gold: RateRow[]; silver: RateRow[] };
+  prevPrices?: { gold: RateRow[]; silver: RateRow[] } | null;
 };
+type ManualRates = { gold24_10g:number; gold22_10g:number; gold18_10g:number; silver999_1kg:number };
 
-type ManualRates = {
-  gold24_10g: number;
-  gold22_10g: number;
-  gold18_10g: number;
-  silver999_1kg: number;
+function formatINR(v: number) {
+  return new Intl.NumberFormat("en-IN",{ style:"currency", currency:"INR", maximumFractionDigits:0 }).format(v);
+}
+
+const PURITY_DESC: Record<string,string> = {
+  "24K":"Pure Gold · 99.9%",
+  "22K":"Indian Standard · 91.6%",
+  "18K":"Mixed Alloy · 75%",
+  "Spot":"Spot Rate",
+  "999":"Fine Silver · 99.9%",
 };
 
 export default function Home() {
-  const [data, setData] = useState<ApiData | null>(null);
-  const [error, setError] = useState<string>("");
-  const [manualRatesActive, setManualRatesActive] = useState(false);
+  const [data, setData]   = useState<ApiData|null>(null);
+  const [error, setError] = useState("");
+  const [manualActive, setManualActive] = useState(false);
 
-  function readManualRates(): ManualRates | null {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem("manualRates");
-    if (!raw) return null;
+  function readManual(): ManualRates|null {
+    if (typeof window==="undefined") return null;
     try {
-      const parsed = JSON.parse(raw) as ManualRates;
-      if (
-        parsed &&
-        [parsed.gold24_10g, parsed.gold22_10g, parsed.gold18_10g, parsed.silver999_1kg].every(
-          (value) => Number.isFinite(value) && value > 0,
-        )
-      ) {
-        return parsed;
-      }
-    } catch {
-      return null;
-    }
+      const p = JSON.parse(localStorage.getItem("manualRates")||"{}") as ManualRates;
+      if ([p.gold24_10g,p.gold22_10g,p.gold18_10g,p.silver999_1kg].every(v=>Number.isFinite(v)&&v>0)) return p;
+    } catch {}
     return null;
   }
 
   async function loadRates() {
     try {
       setError("");
-      const res = await fetch("/api/rates", { cache: "no-store" });
+      const res  = await fetch("/api/rates",{ cache:"no-store" });
       const json = await res.json();
-
-      if (!res.ok) {
-        setError(json?.error ?? "Failed to load rates");
-        setData(null);
-        return;
-      }
-
-      const manualRates = readManualRates();
-      if (manualRates) {
-        setManualRatesActive(true);
-        setData({
-          ...json,
-          note: "Manual exact rates active",
-          prices: {
-            gold: [
-              { purity: "Spot", amount: json.prices.gold[0]?.amount ?? 0 },
-              { purity: "24K", amount: manualRates.gold24_10g },
-              { purity: "22K", amount: manualRates.gold22_10g },
-              { purity: "18K", amount: manualRates.gold18_10g },
-            ],
-            silver: [{ purity: "999", amount: manualRates.silver999_1kg }],
-          },
-        });
+      if (!res.ok) { setError(json?.error??"Failed to load rates"); setData(null); return; }
+      const m = readManual();
+      if (m) {
+        setManualActive(true);
+        setData({ ...json, note:"Admin rates active",
+          prices:{ gold:[{purity:"24K",amount:m.gold24_10g},{purity:"22K",amount:m.gold22_10g},{purity:"18K",amount:m.gold18_10g}],
+                   silver:[{purity:"999",amount:m.silver999_1kg}] }});
       } else {
-        setManualRatesActive(false);
+        setManualActive(false);
         setData(json);
       }
-    } catch (e: any) {
-      setError(e?.message ?? "Network error");
-      setData(null);
-    }
+    } catch(e:any) { setError(e?.message??"Network error"); setData(null); }
   }
 
-  useEffect(() => {
+  useEffect(()=>{
     loadRates();
-    const handleRatesUpdated = () => loadRates();
-    if (typeof window !== "undefined") {
-      window.addEventListener("rates-updated", handleRatesUpdated);
-      window.addEventListener("storage", handleRatesUpdated);
-    }
-    const t = setInterval(loadRates, 10 * 60_000); // every 10 mins
-    return () => {
-      clearInterval(t);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("rates-updated", handleRatesUpdated);
-        window.removeEventListener("storage", handleRatesUpdated);
-      }
-    };
-  }, []);
+    const fn=()=>loadRates();
+    window.addEventListener("rates-updated",fn);
+    window.addEventListener("storage",fn);
+    const t=setInterval(loadRates,10*60_000);
+    return ()=>{ clearInterval(t); window.removeEventListener("rates-updated",fn); window.removeEventListener("storage",fn); };
+  },[]);
 
-  const gold = useMemo(() => data?.prices?.gold ?? [], [data]);
-  const silver = useMemo(() => data?.prices?.silver ?? [], [data]);
+  const gold      = useMemo(()=>data?.prices?.gold??[],[data]);
+  const silver    = useMemo(()=>data?.prices?.silver??[],[data]);
+  const prevGold  = useMemo(()=>data?.prevPrices?.gold??[],[data]);
+  const prevSilver= useMemo(()=>data?.prevPrices?.silver??[],[data]);
 
-  const rateDate = data?.updatedAt
-    ? new Date(data.updatedAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
-    : "Loading...";
+  // Build lookup maps for prev day amounts
+  const prevGoldMap  = useMemo(()=>Object.fromEntries(prevGold.map(r=>[r.purity,r.amount])),  [prevGold]);
+  const prevSilverMap= useMemo(()=>Object.fromEntries(prevSilver.map(r=>[r.purity,r.amount])),[prevSilver]);
 
-  const lastUpdated = data?.updatedAt
-    ? new Date(data.updatedAt).toLocaleString("en-IN")
-    : "Loading...";
+  const rateDate   = data?.updatedAt ? new Date(data.updatedAt).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) : "—";
+  const lastUpdate = data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : "—";
+  const wa = siteConfig.whatsapp.replace(/\D/g,"");
 
   return (
     <>
       <Header />
 
-      {/* Visible tab bar under header for quick navigation */}
+      {/* STICKY PAGE NAV */}
       <div className="page-nav-bar">
-        <div className="container page-nav">
+        <div className="page-nav">
           <Link href="/">Home</Link>
-          <Link href="/shop">Shop</Link>
+          <Link href="/shop">Collection</Link>
           <Link href="/contact">Contact</Link>
           <Link href="/admin">Admin</Link>
         </div>
       </div>
 
-      
-      <main className="container">
-        <h1 className="title">TODAY&apos;S GOLD RATE</h1>
+      {/* ── HERO · LEFT RATES / RIGHT PHOTO ── */}
+      <style>{`
+        .hero-wrap { position:relative; width:100%; overflow:hidden; min-height:clamp(500px,62vw,720px); }
+        .hero-img  { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:78% 20%; display:block; }
+        /* Desktop: dark left → transparent right so photo shows on right */
+        .hero-grad { position:absolute; inset:0; background:linear-gradient(to right,rgba(5,5,3,1) 0%,rgba(5,5,3,0.98) 30%,rgba(5,5,3,0.85) 50%,rgba(5,5,3,0.35) 70%,rgba(5,5,3,0) 88%); }
+        .hero-vignette { position:absolute; inset:0; background:linear-gradient(to bottom,rgba(5,5,3,0.4) 0%,transparent 20%,transparent 80%,rgba(5,5,3,0.5) 100%); }
+        .hero-content { position:relative; z-index:2; height:100%; min-height:clamp(500px,62vw,720px); display:flex; flex-direction:column; justify-content:center; padding:clamp(24px,4vw,52px) clamp(16px,5vw,52px); max-width:clamp(320px,52vw,660px); }
+        /* Mobile: photo shows at top, table at bottom */
+        @media (max-width:640px) {
+          .hero-wrap    { min-height:auto; }
+          .hero-img     { position:relative; inset:unset; width:100%; height:56vw; min-height:210px; max-height:300px; object-position:center 18%; }
+          .hero-grad    { background:linear-gradient(to bottom,rgba(5,5,3,0) 0%,rgba(5,5,3,0.55) 55%,#050503 100%); top:unset; bottom:0; height:80px; }
+          .hero-vignette { display:none; }
+          .hero-content { position:static; min-height:unset; height:auto; max-width:100%; justify-content:flex-start; padding:16px 14px 24px; background:#050503; }
+          .rate-grid    { grid-template-columns:1fr 1fr 58px !important; }
+          .rate-hdr     { grid-template-columns:1fr 1fr 58px !important; }
+          .rate-col-prev { display:none !important; }
+          .rate-hdr-prev { display:none !important; }
+        }
+      `}</style>
+      <div className="hero-wrap">
 
-        <div className="center muted">
-          <div>Rate Date: {rateDate}</div>
-          <div>Last Updated: {lastUpdated}</div>
-          <div style={{ marginTop: 6, fontSize: 13 }}>
-            {data?.city ? `${data.city} • ` : ""}{data?.note ?? ""}
-          </div>
-          {manualRatesActive ? (
-            <div style={{ marginTop: 6, fontSize: 12, color: "#1e7f37" }}>
-              Exact admin-saved rates are active on this page.
+        {/* Photo — anchored right so bride + jewellery is on the right side (desktop) */}
+        <img src="/gold3.jpg" alt="Gold Mania Hyderabad" className="hero-img" />
+
+        {/* Gradients */}
+        <div className="hero-grad" />
+        <div className="hero-vignette" />
+
+        {/* CONTENT — left half on desktop, full-width below photo on mobile */}
+        <div className="hero-content">
+
+          {/* Brand */}
+          <div style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+              <div style={{ height:1, width:22, background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5))" }} />
+              <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.32em", textTransform:"uppercase", color:"rgba(201,168,76,0.65)" }}>Hyderabad · Since 2000</span>
             </div>
-          ) : null}
+            <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:"clamp(22px,4.5vw,58px)", fontWeight:900, letterSpacing:"0.08em", textTransform:"uppercase", background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060,#C9A84C)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", lineHeight:1.05 }}>
+              Gold Mania
+            </div>
+            <div style={{ fontFamily:"var(--font-cormorant,Georgia,serif)", fontSize:"clamp(11px,1.8vw,17px)", fontStyle:"italic", color:"rgba(245,237,214,0.4)", letterSpacing:"0.07em", marginTop:3 }}>
+              Where Gold Meets Luxury
+            </div>
+          </div>
+
+          {/* Table meta row */}
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:4, marginBottom:7 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ fontSize:9, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#6B5C3A" }}>◆ Live Rates</span>
+              <span className="badge badge-live" style={{ fontSize:9, padding:"2px 7px" }}><span className="live-dot"/>Live</span>
+              {manualActive && <span className="badge badge-gold" style={{ fontSize:9, padding:"2px 7px" }}>Admin</span>}
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+              <span style={{ fontSize:9, color:"#4a3e28" }}>{rateDate} · {lastUpdate}</span>
+              <button onClick={loadRates} style={{ background:"transparent", border:"1px solid rgba(212,175,55,0.2)", borderRadius:999, color:"#6B5C3A", fontSize:9, padding:"2px 9px", cursor:"pointer", letterSpacing:"0.1em", fontWeight:700 }}>↻</button>
+            </div>
+          </div>
+
+          {error && <div className="error" style={{ marginBottom:6 }}>{error}</div>}
+
+          {/* RATE TABLE */}
+          <div style={{ background:"rgba(5,5,3,0.72)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", border:"1px solid rgba(212,175,55,0.22)", borderRadius:12, overflow:"hidden" }}>
+
+            {/* Col headers */}
+            <div className="rate-hdr" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 66px", background:"rgba(212,175,55,0.06)", borderBottom:"1px solid rgba(212,175,55,0.1)", padding:"7px 14px" }}>
+              <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:"#5C4E30" }}>Purity</div>
+              <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:"#5C4E30", textAlign:"center" }}>Today / 1g</div>
+              <div className="rate-hdr-prev" style={{ fontSize:8, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:"#5C4E30", textAlign:"center" }}>Yesterday</div>
+              <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.16em", textTransform:"uppercase", color:"#5C4E30", textAlign:"center" }}>Chg</div>
+            </div>
+
+            {/* GOLD */}
+            {gold.length === 0 && !error
+              ? <div style={{ padding:"18px", textAlign:"center", color:"#4a3e28", fontStyle:"italic", fontSize:12 }}>Fetching rates…</div>
+              : gold.map(r=>{
+                  const todayG = r.amount / 10;
+                  const prevG  = prevGoldMap[r.purity] ? prevGoldMap[r.purity] / 10 : null;
+                  const diff   = prevG !== null ? todayG - prevG : null;
+                  const isUp   = diff !== null && diff > 0;
+                  return (
+                    <div key={r.purity} className="rate-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 66px", padding:"10px 14px", borderBottom:"1px solid rgba(212,175,55,0.06)", alignItems:"center" }}>
+                      <div>
+                        <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:15, fontWeight:900, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", lineHeight:1 }}>{r.purity}</div>
+                        <div style={{ fontSize:9, color:"#4a3e28", marginTop:2 }}>{PURITY_DESC[r.purity]??""}</div>
+                      </div>
+                      <div style={{ textAlign:"center", fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:"clamp(12px,1.7vw,16px)", fontWeight:700, color:"#D4AF37" }}>{formatINR(Math.round(todayG))}</div>
+                      <div className="rate-col-prev" style={{ textAlign:"center", fontSize:12, color:"#4a3e28", fontWeight:600 }}>{prevG !== null ? formatINR(Math.round(prevG)) : "—"}</div>
+                      <div style={{ textAlign:"center" }}>
+                        {diff !== null && diff !== 0
+                          ? <span style={{ fontSize:10, fontWeight:700, color:isUp?"#4CAF50":"#ef5350" }}>{isUp?"▲":"▼"}{formatINR(Math.abs(Math.round(diff)))}</span>
+                          : <span style={{ color:"#2d2619", fontSize:10 }}>—</span>}
+                      </div>
+                    </div>
+                  );
+                })
+            }
+
+            {/* Silver divider */}
+            <div style={{ padding:"4px 14px", background:"rgba(160,160,160,0.04)", borderTop:"1px solid rgba(140,140,140,0.1)", borderBottom:"1px solid rgba(140,140,140,0.1)" }}>
+              <span style={{ fontSize:8, fontWeight:700, letterSpacing:"0.2em", textTransform:"uppercase", color:"#3a3a3a" }}>◇ Silver — Per 10 Grams</span>
+            </div>
+
+            {/* SILVER */}
+            {silver.map(r=>{
+              const todayG = r.amount / 100;
+              const prevG  = prevSilverMap[r.purity] ? prevSilverMap[r.purity] / 100 : null;
+              const diff   = prevG !== null ? todayG - prevG : null;
+              const isUp   = diff !== null && diff > 0;
+              return (
+                <div key={r.purity} className="rate-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 66px", padding:"10px 14px", alignItems:"center" }}>
+                  <div>
+                    <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:15, fontWeight:900, color:"#888", lineHeight:1 }}>Silver {r.purity}</div>
+                    <div style={{ fontSize:9, color:"#4a3e28", marginTop:2 }}>Fine Silver · 99.9%</div>
+                  </div>
+                  <div style={{ textAlign:"center", fontSize:"clamp(12px,1.7vw,16px)", fontWeight:700, color:"#A0A0A0" }}>{formatINR(Math.round(todayG))}</div>
+                  <div className="rate-col-prev" style={{ textAlign:"center", fontSize:12, color:"#4a3e28", fontWeight:600 }}>{prevG !== null ? formatINR(Math.round(prevG)) : "—"}</div>
+                  <div style={{ textAlign:"center" }}>
+                    {diff !== null && diff !== 0
+                      ? <span style={{ fontSize:10, fontWeight:700, color:isUp?"#4CAF50":"#ef5350" }}>{isUp?"▲":"▼"}{formatINR(Math.abs(Math.round(diff)))}</span>
+                      : <span style={{ color:"#2d2619", fontSize:10 }}>—</span>}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Footnote */}
+            <div style={{ padding:"6px 14px", borderTop:"1px solid rgba(212,175,55,0.07)", background:"rgba(212,175,55,0.02)" }}>
+              <span style={{ fontSize:8, color:"#2d2619", fontStyle:"italic" }}>Gold per 1g · Silver per 10g · Without GST · Add 3% for counter price</span>
+            </div>
+          </div>
+
         </div>
+      </div>
 
-        {error ? <div className="error">{error}</div> : null}
+      <main className="container">
 
-        {/* GOLD SECTION (10g) */}
-        <section className="card">
-          <div className="card-header">Gold Rates (INR) — 10 Grams</div>
-
-          <div style={{ overflowX: "auto" }}>
-            <table className="rates-table">
-              <thead>
-                <tr>
-                  <th style={th}>Metal</th>
-                  <th style={th}>Purity</th>
-                  <th style={{ ...th, textAlign: "right" }}>Price (10g)</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {gold.length === 0 && !error ? (
-                  <tr>
-                    <td style={td} colSpan={3}>
-                      Loading gold rates...
-                    </td>
-                  </tr>
-                ) : (
-                  gold.map((r, i) => (
-                    <tr key={i} style={{ borderTop: "1px solid #eee" }}>
-                      <td style={td}>Gold</td>
-                      <td style={td}>{r.purity}</td>
-                      <td style={{ ...td, textAlign: "right", fontWeight: 900 }}>
-                        {formatINR(r.amount)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        {/* ── WHY CHOOSE US ── */}
+        <section style={{ marginTop:56 }}>
+          <p className="section-label">Our Promise</p>
+          <h2 className="section-title">Why Gold Mania</h2>
+          <div className="gold-divider" style={{ maxWidth:220, margin:"10px auto 0" }}>
+            <span className="gold-divider-icon">◆</span>
+          </div>
+          <div className="feature-grid">
+            {siteConfig.features.map((f,i)=>(
+              <div key={i} className="feature-item">
+                <span className="feature-icon">{f.icon}</span>
+                <div className="feature-title">{f.title}</div>
+                <div className="feature-desc">{f.description}</div>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* SILVER SECTION (1kg) */}
-        <section className="card">
-          <div className="card-header">Silver Rate (INR) — 1 KG</div>
+        {/* ── FEATURED COLLECTION ── */}
+        <section style={{ marginTop:44 }}>
+          <div style={{ textAlign:"center", marginBottom:28 }}>
+            <p className="section-label">Handpicked For You</p>
+            <h2 className="section-title">Featured Collection</h2>
+            <div className="gold-divider" style={{ maxWidth:220, margin:"10px auto 0" }}>
+              <span className="gold-divider-icon">◆ ◆</span>
+            </div>
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))", gap:16 }}>
 
-          <div style={{ overflowX: "auto" }}>
-            <table className="rates-table">
-              <thead>
-                <tr>
-                  <th style={th}>Metal</th>
-                  <th style={th}>Purity</th>
-                  <th style={{ ...th, textAlign: "right" }}>Price (1kg)</th>
-                </tr>
-              </thead>
+            {/* Card 1 */}
+            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+              <div style={{ height:200, overflow:"hidden", position:"relative" }}>
+                <img src="/gold1.png" alt="24K Pure Gold" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.6s ease" }}
+                  onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1.06)"}
+                  onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1)"}
+                />
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg,rgba(5,5,3,0.7),transparent 55%)" }} />
+                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>24K · 999 PURITY</div>
+              </div>
+              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Pure Gold Collection</div>
+                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>BIS Hallmarked 24K gold bars and coins. Ideal for investment and gifting.</div>
+                <a href={`https://wa.me/${wa}?text=Hi, I'm interested in your 24K Pure Gold collection.`} target="_blank" rel="noreferrer"
+                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#128C7E,#25D366)", color:"#fff", textDecoration:"none", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
+                  ◆ WhatsApp Enquiry
+                </a>
+              </div>
+            </div>
 
-              <tbody>
-                {silver.length === 0 && !error ? (
-                  <tr>
-                    <td style={td} colSpan={3}>
-                      Loading silver rate...
-                    </td>
-                  </tr>
-                ) : (
-                  silver.map((r, i) => (
-                    <tr key={i}>
-                      <td style={td}>Silver</td>
-                      <td style={td}>{r.purity}</td>
-                      <td className="numeric" style={{ ...td }}>
-                        {formatINR(r.amount)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            {/* Card 2 */}
+            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+              <div style={{ height:200, overflow:"hidden", position:"relative" }}>
+                <img src="/gold3.jpg" alt="Designer Jewellery" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.6s ease" }}
+                  onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1.06)"}
+                  onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1)"}
+                />
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg,rgba(5,5,3,0.7),transparent 55%)" }} />
+                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>22K · HALLMARKED</div>
+              </div>
+              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Designer Jewellery</div>
+                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>Handcrafted necklaces, bangles and bridal sets. 22K certified purity.</div>
+                <a href={`https://wa.me/${wa}?text=Hi, I'm interested in your Designer Jewellery collection.`} target="_blank" rel="noreferrer"
+                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#128C7E,#25D366)", color:"#fff", textDecoration:"none", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
+                  ◆ WhatsApp Enquiry
+                </a>
+              </div>
+            </div>
+
+            {/* Card 3 — Bespoke */}
+            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+              <div style={{ height:200, background:"linear-gradient(135deg,#1a1506,#0c0c0a)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                <div style={{ textAlign:"center" }}>
+                  <div style={{ fontSize:52, lineHeight:1, marginBottom:10, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>◈</div>
+                  <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.28em", color:"#4a3e28", textTransform:"uppercase" }}>Your Vision · Our Craft</div>
+                </div>
+                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>BESPOKE · CUSTOM</div>
+              </div>
+              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Custom Designs</div>
+                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>Bring your dream jewellery to life. Bridal sets, rings, chains — any design, any purity.</div>
+                <a href={`https://wa.me/${wa}?text=Hi, I'd like a custom jewellery design quote.`} target="_blank" rel="noreferrer"
+                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#8B6914,#D4AF37)", color:"#0a0806", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
+                  ◆ Get Free Quote
+                </a>
+              </div>
+            </div>
+
           </div>
         </section>
 
-          {/* After rates: Hero slider + Featured */}
-          <HeroSlider />
-
-          {/* FEATURES SECTION */}
-          <section style={{ marginTop: 20 }}>
-            <h2 className="center" style={{ marginBottom: 16, fontSize: 24, fontWeight: 700 }}>Why Choose Us?</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
-              {siteConfig.features.map((feature, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    padding: 16,
-                    backgroundColor: "#f9f9f9",
-                    borderRadius: 8,
-                    border: "1px solid #e0e0e0",
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>{feature.icon}</div>
-                  <div style={{ fontWeight: 700, marginBottom: 8, fontSize: 15 }}>{feature.title}</div>
-                  <div className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>{feature.description}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* FEATURED JEWELLERY GALLERY */}
-          <section className="card" style={{ padding: 16, marginTop: 20 }}>
-            <h2 className="center" style={{ marginTop: 0, marginBottom: 20, fontSize: 24, fontWeight: 700 }}>✨ Featured Collection</h2>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: 16,
-            }}>
-              <div style={{
-                backgroundColor: "#fff",
-                borderRadius: 8,
-                overflow: "hidden",
-                border: "1px solid #e0e0e0",
-                transition: "transform 0.3s, box-shadow 0.3s",
-              }}>
-                <img src="/gold1.png" alt="Gold Bar" style={{ width: "100%", height: 200, objectFit: "cover" }} />
-                <div style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>24K Gold Bar</div>
-                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Pure hallmarked gold • 10g approx.</div>
-                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
-                    📱 Enquire on WhatsApp
-                  </a>
-                </div>
+        {/* ── TRUST STRIP ── */}
+        <section style={{ marginTop:44, padding:"28px 24px", background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.1)" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,160px),1fr))", gap:20, textAlign:"center" }}>
+            {[
+              { icon:"◆", num:"25+", label:"Years in Hyderabad" },
+              { icon:"◈", num:"10K+", label:"Happy Families" },
+              { icon:"◇", num:"100%", label:"BIS Hallmarked" },
+              { icon:"✦", num:"10 Min", label:"Rate Updates" },
+            ].map(t=>(
+              <div key={t.label}>
+                <div style={{ fontSize:10, color:"#D4AF37", marginBottom:6, letterSpacing:"0.15em" }}>{t.icon}</div>
+                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:26, fontWeight:900, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", lineHeight:1 }}>{t.num}</div>
+                <div style={{ fontSize:11, color:"#5C5040", marginTop:4, letterSpacing:"0.06em" }}>{t.label}</div>
               </div>
+            ))}
+          </div>
+        </section>
 
-              <div style={{
-                backgroundColor: "#fff",
-                borderRadius: 8,
-                overflow: "hidden",
-                border: "1px solid #e0e0e0",
-                transition: "transform 0.3s, box-shadow 0.3s",
-              }}>
-                <img src="/gold3.jpg" alt="Necklace" style={{ width: "100%", height: 200, objectFit: "cover" }} />
-                <div style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Designer Necklace</div>
-                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Handcrafted 22K • Premium design</div>
-                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
-                    📱 Enquire on WhatsApp
-                  </a>
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: "#fff",
-                borderRadius: 8,
-                overflow: "hidden",
-                border: "1px solid #e0e0e0",
-                transition: "transform 0.3s, box-shadow 0.3s",
-              }}>
-                <div style={{ width: "100%", height: 200, backgroundColor: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>
-                  💍
-                </div>
-                <div style={{ padding: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Custom Designs</div>
-                  <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>Create your unique jewelry • Any design</div>
-                  <a href={`https://wa.me/${siteConfig.whatsapp.replace(/\D/g, "")}`} className="cta" style={{ display: "inline-block", padding: "8px 12px", backgroundColor: "#1e87a7", color: "white", textDecoration: "none", borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
-                    📱 Get Free Quote
-                  </a>
-                </div>
-              </div>
-            </div>
-          </section>
-
-        <section style={{ marginTop: 24 }}>
-          <h2>All About Gold!</h2>
-          <p className="muted" style={{ lineHeight: 1.7 }}>
-            This page shows Hyderabad retail (approx.) INR rates.
-            Gold is shown per <b>10 grams</b> and Silver is shown per <b>1 kg</b>.
+        {/* ── INFO ── */}
+        <section className="info-section">
+          <h2>About These Rates</h2>
+          <p>
+            Rates are sourced from IBJA (India Bullion &amp; Jewellers Association) with a Hyderabad local premium applied to match Sri Krishna &amp; Vardhaman Jewellers pricing.
+            Gold is displayed <strong style={{ color:"var(--gold)" }}>per 1 gram</strong>, silver <strong style={{ color:"#C0C0C0" }}>per 10 grams</strong> — both <strong>without GST</strong> and without making charges.
+            Add 3% GST for the final counter price.
+            {data?.source && <> Source: <em style={{ color:"var(--fg-subtle)" }}>{data.source}</em>.</>}
           </p>
         </section>
 
-        <section className="card" style={{ padding: 16 }}>
-          <h2 className="center" style={{ marginTop: 0 }}>
-            Subscribe for Metal Rate Update
-          </h2>
-
-          <form style={{ display: "grid", gap: 12, marginTop: 14 }}>
-            <input className="input" placeholder="Customer Name" />
-            <input className="input" placeholder="Enter Your Area" />
-            <input className="input" placeholder="Enter Your Email" />
-            <button type="button" className="btn btn-primary">
-              Subscribe
-            </button>
+        {/* ── SUBSCRIBE ── */}
+        <section className="subscribe-section">
+          <p className="section-label">Stay Informed</p>
+          <h2 className="section-title" style={{ color:"var(--fg)" }}>Get Rate Alerts</h2>
+          <div className="gold-divider" style={{ maxWidth:200, margin:"10px auto 0" }}>
+            <span className="gold-divider-icon">◆</span>
+          </div>
+          <p style={{ marginTop:14, color:"var(--fg-subtle)", fontSize:14, fontStyle:"italic", fontFamily:"var(--font-cormorant,Georgia,serif)" }}>
+            Receive live gold &amp; silver price alerts directly to your inbox.
+          </p>
+          <form className="subscribe-form" onSubmit={e=>e.preventDefault()}>
+            <input className="input" placeholder="Your Name" type="text"/>
+            <input className="input" placeholder="Your Area / City" type="text"/>
+            <input className="input" placeholder="Email Address" type="email"/>
+            <button type="submit" className="btn btn-gold">Subscribe for Alerts</button>
           </form>
         </section>
+
       </main>
+
+      <Footer />
+
+      {/* FLOATING WHATSAPP */}
+      <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" className="wa-float" aria-label="WhatsApp">
+        💬
+      </a>
     </>
   );
-}
-
-const th: React.CSSProperties = { padding: 12, textAlign: "left" };
-const td: React.CSSProperties = { padding: 12 };
-
-
-
-function formatINR(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(value);
 }
