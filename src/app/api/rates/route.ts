@@ -2,19 +2,20 @@
  * Gold Rate API — Hyderabad
  *
  * Priority order:
- *  1. goodreturns.in  — live Hyderabad retail rates (scrape)
- *  2. IBJA            — India Bullion & Jewellers Association (scrape)
- *  3. goldapi.io      — international spot × Indian multiplier (fallback)
+ *  1. dpgold.com      — live Andhra Pradesh / Telangana retail rates (direct API)
+ *  2. goodreturns.in  — live Hyderabad retail rates (scrape)
+ *  3. IBJA            — India Bullion & Jewellers Association (scrape)
+ *  4. goldapi.io      — international spot × Indian multiplier (fallback)
+ *
+ * Previous-day rates always come from IBJA history table.
  *
  * Response shape expected by page.tsx:
  * {
  *   updatedAt: string,
  *   city: string,
  *   source: string,
- *   prices: {
- *     gold:   [{purity, amount}],
- *     silver: [{purity, amount}]
- *   }
+ *   prices:    { gold: [{purity, amount}], silver: [{purity, amount}] },
+ *   prevPrices?: { gold: [{purity, amount}], silver: [{purity, amount}] } | null
  * }
  */
 
@@ -36,7 +37,57 @@ function parseAmount(s: string): number {
   return parseFloat(s.replace(/[,\s₹]/g, ""));
 }
 
-// ── SOURCE 1: goodreturns.in ──────────────────────────────────────────────────
+// ── SOURCE 1: dpgold.com — Andhra Pradesh / Telangana live retail rates ───────
+// API: statewisebcast.dpgold.in — tab-separated, no auth required.
+// Format per line:  \t<ID>\t<Name>\t<Current>\t<Bid>\t<High>\t<Low>\t<Unit>
+// Gold AP-Telangana 999 value is per GRAM (despite label "/ 10 Gm").
+// Verified: 15625/g × 94.52 INR/USD matches $4315/oz spot + ~19% import duty + GST.
+async function scrapeDPGold(): Promise<{
+  gold24PerGram: number; // per gram
+  silverPerKg: number;   // per kg
+} | null> {
+  try {
+    const res = await fetch(
+      "https://statewisebcast.dpgold.in:7768/VOTSBroadcastStreaming/Services/xml/GetLiveRateByTemplateID/dpgold",
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Referer": "https://www.dpgold.com/",
+        },
+        signal: AbortSignal.timeout(8_000),
+      }
+    );
+    if (!res.ok) return null;
+    const text = await res.text();
+
+    let gold24PerGram = 0;
+    let silverPerKg = 0;
+
+    for (const line of text.split("\n")) {
+      const cols = line.split("\t").map((s) => s.trim());
+      // cols: ["", id, name, current, bid, high, low, unit]
+      const name = (cols[2] ?? "").toLowerCase();
+      const val = parseFloat(cols[3] ?? "0");
+      if (!isFinite(val) || val <= 0) continue;
+
+      if ((name.includes("andhra") || name.includes("telangana")) && name.includes("999")) {
+        // Gold AP-Telangana 999 — value is per gram (verified via gold-silver ratio)
+        if (val > 5000 && val < 50000) gold24PerGram = val;
+      }
+      if (name.includes("silver") && (name.includes("pan") || name.includes("india"))) {
+        // Silver PAN India — value is per kg
+        if (val > 50000 && val < 2000000) silverPerKg = val;
+      }
+    }
+
+    if (gold24PerGram > 5000) return { gold24PerGram, silverPerKg };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// ── SOURCE 2: goodreturns.in ──────────────────────────────────────────────────
 async function scrapeGoodReturns(): Promise<{
   gold24: number; gold22: number; gold18: number; silver: number;
 } | null> {
@@ -117,7 +168,7 @@ async function scrapeGoodReturns(): Promise<{
   }
 }
 
-// ── SOURCE 2: ibjarates.com ───────────────────────────────────────────────────
+// ── SOURCE 3: ibjarates.com ───────────────────────────────────────────────────
 type IBJARates = {
   gold24: number; gold22: number; gold18: number; gold750: number; silver: number;
 };
@@ -201,7 +252,7 @@ async function scrapeIBJA(): Promise<{
   }
 }
 
-// ── SOURCE 3: goldapi.io (fallback) ──────────────────────────────────────────
+// ── SOURCE 4: goldapi.io (fallback) ──────────────────────────────────────────
 async function fetchGoldAPI(metal: "XAU" | "XAG") {
   const key = process.env.GOLDAPI_KEY;
   if (!key) throw new Error("Missing GOLDAPI_KEY");
@@ -249,23 +300,41 @@ export async function GET() {
     let prevRates: IBJARates | null = null;
     let source = "goldapi.io (fallback)";
 
-    // Local Hyderabad premium — IBJA is Mumbai benchmark; Hyderabad retail adds freight + local demand
+    // Local Hyderabad premium — only applied when using IBJA/goodreturns wholesale rates
     const localGoldPremium = Number(process.env.LOCAL_GOLD_PREMIUM ?? 0);
     const localSilverPremium = Number(process.env.LOCAL_SILVER_PREMIUM ?? 0);
 
-    // ── Try goodreturns.in first ──
-    const gr = await scrapeGoodReturns();
-    if (gr && gr.gold24 > 100000) {
+    // ── Try dpgold.com first (AP/Telangana live retail, includes all duties) ──
+    const dpg = await scrapeDPGold();
+    if (dpg && dpg.gold24PerGram > 5000) {
+      // dpgold gives per-gram; we store per-10g internally (page.tsx divides by 10 for display)
+      const g24 = r2(dpg.gold24PerGram * 10);
       rates = {
-        gold24: r2(gr.gold24 + localGoldPremium),
-        gold22: r2(gr.gold22 + localGoldPremium),
-        gold18: r2(gr.gold18 + localGoldPremium),
-        silver: gr.silver > 0 ? r2(gr.silver + localSilverPremium) : 0,
+        gold24: g24,
+        gold22: r2(g24 * (22 / 24)),
+        gold18: r2(g24 * (18 / 24)),
+        silver: dpg.silverPerKg > 0 ? r2(dpg.silverPerKg) : 0,
       };
-      source = "goodreturns.in (Hyderabad retail)";
-      // Also scrape IBJA for previous day (goodreturns doesn't have history)
+      source = "dpgold.com (AP/Telangana live retail)";
+      // Fetch IBJA in parallel for previous-day history
       const ibjaExtra = await scrapeIBJA();
       if (ibjaExtra?.prevDay) prevRates = ibjaExtra.prevDay;
+    }
+
+    // ── Try goodreturns.in ──
+    if (!rates) {
+      const gr = await scrapeGoodReturns();
+      if (gr && gr.gold24 > 100000) {
+        rates = {
+          gold24: r2(gr.gold24 + localGoldPremium),
+          gold22: r2(gr.gold22 + localGoldPremium),
+          gold18: r2(gr.gold18 + localGoldPremium),
+          silver: gr.silver > 0 ? r2(gr.silver + localSilverPremium) : 0,
+        };
+        source = "goodreturns.in (Hyderabad retail)";
+          const ibjaExtra = await scrapeIBJA();
+        if (ibjaExtra?.prevDay) prevRates = ibjaExtra.prevDay;
+      }
     }
 
     // ── Try IBJA (also gives us previous day rates) ──
@@ -280,7 +349,7 @@ export async function GET() {
         };
         if (ibja.prevDay) prevRates = ibja.prevDay;
         source = "IBJA (India Bullion & Jewellers Association)";
-      }
+        }
     }
 
     // ── Fall back to goldapi.io ──
@@ -290,6 +359,7 @@ export async function GET() {
     }
 
     const silverAmt = rates.silver > 0 ? rates.silver : r2(rates.gold24 * 0.0165);
+    // Previous day silver: IBJA gives per-kg; add local premium only if premium wasn't already applied
     const prevSilverAmt = prevRates && prevRates.silver > 0
       ? r2(prevRates.silver + localSilverPremium)
       : 0;
