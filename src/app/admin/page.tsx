@@ -95,6 +95,7 @@ export default function AdminPage() {
   const [adminPass] = useState("admin");
 
   const [items, setItems] = useState<Item[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(true);
 
   // Manual rates — only 24K input; 22K/18K auto-derived
   const [gold24Input, setGold24Input] = useState("");
@@ -106,10 +107,21 @@ export default function AdminPage() {
   const [form, setForm] = useState({ name: "", metal: "Gold" as "Gold" | "Silver", purity: "22K" as Purity, weight: "", wastage: "3" });
   const [preview, setPreview] = useState<string | undefined>();
   const [itemSaved, setItemSaved] = useState(false);
+  const [itemError, setItemError] = useState("");
+
+  const ADMIN_SECRET = "admin123"; // must match ADMIN_SECRET env var on Vercel
+
+  async function loadItems() {
+    try {
+      const res = await fetch("/api/items", { cache: "no-store" });
+      setItems(await res.json());
+    } catch { /* keep current */ }
+    finally { setItemsLoading(false); }
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setItems(readItems());
+    loadItems();
     const m = readManualRates();
     if (m) {
       setManualRates(m);
@@ -171,7 +183,7 @@ export default function AdminPage() {
     img.src = url;
   }
 
-  function addItem() {
+  async function addItem() {
     if (!form.name.trim()) return alert("Enter item name");
     if (!Number(form.weight) || Number(form.weight) <= 0) return alert("Enter valid weight");
     const it: Item = {
@@ -183,21 +195,37 @@ export default function AdminPage() {
       image: preview,
       wastagePercent: Number(form.wastage) || 0,
     };
-    const next = [it, ...items];
-    setItems(next);
-    localStorage.setItem("items", JSON.stringify(next));
-    window.dispatchEvent(new Event("items-updated"));
-    setForm({ name: "", metal: "Gold", purity: "22K", weight: "", wastage: "3" });
-    setPreview(undefined);
-    setItemSaved(true);
-    setTimeout(() => setItemSaved(false), 2000);
+    setItemError("");
+    try {
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+        body: JSON.stringify(it),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setItemError(err.error ?? "Failed to save");
+        return;
+      }
+      setItems(prev => [it, ...prev]);
+      setForm({ name: "", metal: "Gold", purity: "22K", weight: "", wastage: "3" });
+      setPreview(undefined);
+      setItemSaved(true);
+      setTimeout(() => setItemSaved(false), 2500);
+    } catch {
+      setItemError("Network error — check connection");
+    }
   }
 
-  function deleteItem(id: string) {
-    const next = items.filter(i => i.id !== id);
-    setItems(next);
-    localStorage.setItem("items", JSON.stringify(next));
-    window.dispatchEvent(new Event("items-updated"));
+  async function deleteItem(id: string) {
+    try {
+      await fetch("/api/items", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "x-admin-secret": ADMIN_SECRET },
+        body: JSON.stringify({ id }),
+      });
+      setItems(prev => prev.filter(i => i.id !== id));
+    } catch { /* silently retry */ }
   }
 
   function priceFor(it: Item): number {
@@ -362,17 +390,20 @@ export default function AdminPage() {
                 )}
 
                 <button style={{ ...btnGold, marginTop: 16 }} onClick={addItem}>
-                  {itemSaved ? "✓ Added!" : "Add Product"}
+                  {itemSaved ? "✓ Saved — visible to all!" : "Add Product"}
                 </button>
+                {itemError && <div style={{ marginTop: 10, color: "#ef5350", fontSize: 12 }}>{itemError}</div>}
               </div>
 
               {/* ── ITEMS LIST ── */}
               <div style={sectionStyle}>
                 <div style={{ fontFamily: "var(--font-playfair,Georgia,serif)", fontSize: 15, fontWeight: 700, color: "#C9A84C", marginBottom: 18 }}>
-                  Products ({items.length})
+                  Products ({itemsLoading ? "…" : items.length})
                 </div>
 
-                {items.length === 0 ? (
+                {itemsLoading ? (
+                  <div style={{ color: "#4a3e28", fontSize: 12, textAlign: "center", padding: "20px 0", fontStyle: "italic" }}>Loading…</div>
+                ) : items.length === 0 ? (
                   <div style={{ color: "#4a3e28", fontSize: 13, fontStyle: "italic", textAlign: "center", padding: "24px 0" }}>No products added yet.</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
