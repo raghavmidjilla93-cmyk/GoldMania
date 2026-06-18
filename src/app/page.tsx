@@ -35,7 +35,15 @@ export default function Home() {
     if (typeof window==="undefined") return null;
     try {
       const p = JSON.parse(localStorage.getItem("manualRates")||"{}") as ManualRates;
-      if ([p.gold24_10g,p.gold22_10g,p.gold18_10g,p.silver999_1kg].every(v=>Number.isFinite(v)&&v>0)) return p;
+      if (Number.isFinite(p.gold24_10g) && p.gold24_10g > 0) {
+        // Auto-derive 22K and 18K if not set
+        return {
+          gold24_10g: p.gold24_10g,
+          gold22_10g: p.gold22_10g > 0 ? p.gold22_10g : Math.round(p.gold24_10g * 22/24),
+          gold18_10g: p.gold18_10g > 0 ? p.gold18_10g : Math.round(p.gold24_10g * 18/24),
+          silver999_1kg: p.silver999_1kg || 0,
+        };
+      }
     } catch {}
     return null;
   }
@@ -182,7 +190,7 @@ export default function Home() {
                         <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:15, fontWeight:900, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text", lineHeight:1 }}>{r.purity}</div>
                         <div style={{ fontSize:9, color:"#4a3e28", marginTop:2 }}>{PURITY_DESC[r.purity]??""}</div>
                       </div>
-                      <div style={{ textAlign:"center", fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:"clamp(12px,1.7vw,16px)", fontWeight:700, color:"#D4AF37" }}>{formatINR(Math.round(todayG))}</div>
+                      <div style={{ textAlign:"center", fontFamily:"system-ui,sans-serif", fontSize:"clamp(13px,1.7vw,17px)", fontWeight:700, color:"#D4AF37" }}>{formatINR(Math.round(todayG))}</div>
                       <div className="rate-col-prev" style={{ textAlign:"center", fontSize:12, color:"#4a3e28", fontWeight:600 }}>{prevG !== null ? formatINR(Math.round(prevG)) : "—"}</div>
                       <div style={{ textAlign:"center" }}>
                         {diff !== null && diff !== 0
@@ -211,7 +219,7 @@ export default function Home() {
                     <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:15, fontWeight:900, color:"#888", lineHeight:1 }}>Silver {r.purity}</div>
                     <div style={{ fontSize:9, color:"#4a3e28", marginTop:2 }}>Fine Silver · 99.9%</div>
                   </div>
-                  <div style={{ textAlign:"center", fontSize:"clamp(12px,1.7vw,16px)", fontWeight:700, color:"#A0A0A0" }}>{formatINR(Math.round(todayG))}</div>
+                  <div style={{ textAlign:"center", fontFamily:"system-ui,sans-serif", fontSize:"clamp(13px,1.7vw,17px)", fontWeight:700, color:"#A0A0A0" }}>{formatINR(Math.round(todayG))}</div>
                   <div className="rate-col-prev" style={{ textAlign:"center", fontSize:12, color:"#4a3e28", fontWeight:600 }}>{prevG !== null ? formatINR(Math.round(prevG)) : "—"}</div>
                   <div style={{ textAlign:"center" }}>
                     {diff !== null && diff !== 0
