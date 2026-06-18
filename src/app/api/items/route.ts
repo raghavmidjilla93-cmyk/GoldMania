@@ -45,11 +45,15 @@ function seedItems(): Item[] {
 
 type BlobStore = { initialized: boolean; items: Item[] };
 
+function hasToken(): boolean {
+  return !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+
 async function readBlob(): Promise<BlobStore> {
+  if (!hasToken()) return { initialized: false, items: [] };
   try {
     const { blobs } = await list({ prefix: BLOB_PREFIX });
     if (!blobs.length) return { initialized: false, items: [] };
-    // Sort newest-first and take the latest
     const latest = blobs.sort(
       (a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     )[0];
@@ -91,6 +95,7 @@ export async function GET() {
 // ── POST — add item ───────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   if (!checkAuth(req)) return Response.json({ error: "Unauthorized" }, { status: 401 });
+  if (!hasToken()) return Response.json({ error: "BLOB_READ_WRITE_TOKEN not set — add it in Vercel Project Settings → Environment Variables" }, { status: 503 });
   try {
     const item: Item = await req.json();
     if (!item.id || !item.name) return Response.json({ error: "Missing id or name" }, { status: 400 });
