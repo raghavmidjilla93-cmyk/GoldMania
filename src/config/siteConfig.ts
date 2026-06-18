@@ -113,4 +113,16 @@ export const siteConfig = {
   // ===== PURITY OPTIONS =====
   goldPurities: [
     { name: "24K", percentage: 99.9, description: "Pure Gold" },
-    { name: "22K", percentage: 91.6, description: "Indian Standard"
+    { name: "22K", percentage: 91.6, description: "Indian Standard" },
+    { name: "18K", percentage: 75, description: "Mixed Metal" },
+  ],
+
+  // ===== ADMIN SETTINGS =====
+  // Default admin username: admin
+  // Default admin password: admin
+  // Change these in the .env.local file or in the admin panel
+  adminSettings: {
+    defaultUsername: "admin",
+    defaultPassword: "admin123",
+  },
+};

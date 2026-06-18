@@ -152,4 +152,116 @@ export default function HeroSlider() {
             color: "rgba(245,237,214,0.6)",
             letterSpacing: "0.05em",
             margin: 0,
-            animation: "fadeUp 0.
+            animation: "fadeUp 0.55s ease both",
+            animationDelay: "0.28s",
+          }}>
+            {slide.subtitle}
+          </p>
+
+          {/* CTA */}
+          <div style={{
+            marginTop: 22,
+            animation: "fadeUp 0.55s ease both",
+            animationDelay: "0.35s",
+          }}>
+            {ctaExternal ? (
+              <a
+                href={ctaHref}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  padding: "10px 28px", borderRadius: 999,
+                  background: G, color: "#0a0806",
+                  textDecoration: "none", fontSize: 11,
+                  fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
+                  display: "inline-block",
+                }}
+              >
+                {slide.cta}
+              </a>
+            ) : (
+              <Link
+                href={ctaHref}
+                style={{
+                  padding: "10px 28px", borderRadius: 999,
+                  background: G, color: "#0a0806",
+                  textDecoration: "none", fontSize: 11,
+                  fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase",
+                  display: "inline-block",
+                }}
+              >
+                {slide.cta}
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── NAV ARROWS ── */}
+      <button
+        onClick={() => { setPaused(true); go((index - 1 + images.length) % images.length, -1); }}
+        aria-label="Previous slide"
+        style={{
+          position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)",
+          zIndex: 10, background: "rgba(5,5,3,0.6)",
+          border: "1px solid rgba(212,175,55,0.25)", borderRadius: "50%",
+          width: 40, height: 40, cursor: "pointer", color: "#D4AF37",
+          fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "border-color 0.2s, background 0.2s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(212,175,55,0.7)"; e.currentTarget.style.background = "rgba(5,5,3,0.85)"; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(212,175,55,0.25)"; e.currentTarget.style.background = "rgba(5,5,3,0.6)"; }}
+      >
+        ‹
+      </button>
+
+      <button
+        onClick={() => { setPaused(true); go((index + 1) % images.length, 1); }}
+        aria-label="Next slide"
+        style={{
+          position: "absolute", right: 16, top: "50%", transform: "translateY(-50%)",
+          zIndex: 10, background: "rgba(5,5,3,0.6)",
+          border: "1px solid rgba(212,175,55,0.25)", borderRadius: "50%",
+          width: 40, height: 40, cursor: "pointer", color: "#D4AF37",
+          fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center",
+          transition: "border-color 0.2s, background 0.2s",
+        }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = "rgba(212,175,55,0.7)"; e.currentTarget.style.background = "rgba(5,5,3,0.85)"; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(212,175,55,0.25)"; e.currentTarget.style.background = "rgba(5,5,3,0.6)"; }}
+      >
+        ›
+      </button>
+
+      {/* ── PROGRESS LINES ── */}
+      <div style={{
+        position: "absolute", bottom: 16, left: "50%", transform: "translateX(-50%)",
+        zIndex: 10, display: "flex", gap: 6, alignItems: "center",
+      }}>
+        {images.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => { setPaused(true); go(i, i > index ? 1 : -1); }}
+            aria-label={`Go to slide ${i + 1}`}
+            style={{
+              height: 2, width: i === index ? 32 : 16,
+              border: "none", cursor: "pointer", padding: 0, borderRadius: 999,
+              background: i === index
+                ? "linear-gradient(90deg,#8B6914,#D4AF37,#F0D060)"
+                : "rgba(212,175,55,0.2)",
+              transition: "all 0.35s ease",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ── ANIMATIONS ── */}
+      <style>{`
+        @keyframes slideOutLeft  { to   { transform: translateX(-100%); opacity: 0; } }
+        @keyframes slideOutRight { to   { transform: translateX(100%);  opacity: 0; } }
+        @keyframes slideInRight  { from { transform: translateX(60px);  opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideInLeft   { from { transform: translateX(-60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeUp        { from { transform: translateY(14px);  opacity: 0; } to { transform: translateY(0);  opacity: 1; } }
+      `}</style>
+    </section>
+  );
+}

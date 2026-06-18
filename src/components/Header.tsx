@@ -169,4 +169,89 @@ export default function Header() {
                   color: "#D4AF37",
                   width: 40,
                   height: 40,
-                  cursor: "p
+                  cursor: "pointer",
+                  display: "none",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: 5,
+                  padding: "8px 10px",
+                  transition: "border-color 0.2s",
+                }}
+              >
+                <span style={{ display: "block", width: 18, height: 1.5, background: "#D4AF37", transition: "all 0.3s", transform: open ? "rotate(45deg) translate(4px,4px)" : "none" }} />
+                <span style={{ display: "block", width: 18, height: 1.5, background: "#D4AF37", transition: "all 0.3s", opacity: open ? 0 : 1 }} />
+                <span style={{ display: "block", width: 18, height: 1.5, background: "#D4AF37", transition: "all 0.3s", transform: open ? "rotate(-45deg) translate(4px,-4px)" : "none" }} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* MOBILE DRAWER */}
+        <div style={{
+          overflow: "hidden",
+          maxHeight: open ? 400 : 0,
+          transition: "max-height 0.38s cubic-bezier(0.4,0,0.2,1)",
+          borderTop: open ? "1px solid rgba(212,175,55,0.1)" : "none",
+        }}>
+          <div style={{ background: "#050503", padding: "8px 20px 20px", display: "flex", flexDirection: "column", gap: 2 }}>
+            {nav.map(item => (
+              <Link key={item.href} href={item.href} onClick={() => setOpen(false)} style={{
+                color: pathname === item.href ? "#D4AF37" : "#6B5C3A",
+                textDecoration: "none",
+                padding: "13px 14px",
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                borderBottom: "1px solid rgba(212,175,55,0.06)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}>
+                <span style={{ color: "#D4AF37", fontSize: 7 }}>▶</span>
+                {item.label}
+              </Link>
+            ))}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+              <a href={`tel:${siteConfig.phone}`} style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "11px 12px", borderRadius: 999,
+                border: "1px solid rgba(212,175,55,0.25)", color: "#D4AF37",
+                textDecoration: "none", fontSize: 11, fontWeight: 700,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+              }}>
+                Call Us
+              </a>
+              <a href={`https://wa.me/${wa}`} target="_blank" rel="noreferrer" style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                padding: "11px 12px", borderRadius: 999,
+                background: "linear-gradient(135deg,#128C7E,#25D366)",
+                color: "#fff", textDecoration: "none",
+                fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+              }}>
+                WhatsApp
+              </a>
+            </div>
+          </div>
+        </div>
+
+      </header>
+
+      <style>{`
+        @keyframes ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        @media (max-width: 768px) {
+          .hdr-desktop { display: none !important; }
+          .hdr-burger  { display: flex !important; }
+          .hdr-wa      { display: none !important; }
+        }
+        @media (min-width: 769px) {
+          .hdr-burger { display: none !important; }
+        }
+      `}</style>
+    </>
+  );
+}
