@@ -88,11 +88,16 @@ const btnGold: React.CSSProperties = {
 };
 
 export default function AdminPage() {
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  const ADMIN_USER = "admin";
+  const ADMIN_PASS = "GoldMania@2025";
+  const SESSION_KEY = "gm_admin_session";
+
   const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [adminUser] = useState("admin");
-  const [adminPass] = useState("admin");
+  const [showPass, setShowPass] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const [items, setItems] = useState<Item[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
@@ -121,6 +126,8 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Restore session from sessionStorage (cleared when browser tab closes)
+    if (sessionStorage.getItem(SESSION_KEY) === "1") setLoggedIn(true);
     loadItems();
     const m = readManualRates();
     if (m) {
@@ -136,8 +143,21 @@ export default function AdminPage() {
   const g18 = g24 > 0 ? Math.round(g24 * 18 / 24) : 0;
 
   function login() {
-    if (username === adminUser && password === adminPass) setLoggedIn(true);
-    else alert("Wrong credentials");
+    if (username.trim() === ADMIN_USER && password === ADMIN_PASS) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      setLoggedIn(true);
+      setLoginError("");
+    } else {
+      setLoginError("Incorrect username or password.");
+      setPassword("");
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    setLoggedIn(false);
+    setUsername("");
+    setPassword("");
   }
 
   function saveRates() {
@@ -250,24 +270,58 @@ export default function AdminPage() {
                 Gold Mania
               </div>
             </div>
-            <Link href="/" style={{ color: "#6B5C3A", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 999, padding: "8px 16px" }}>
-              ← Home
-            </Link>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <Link href="/" style={{ color: "#6B5C3A", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 999, padding: "8px 16px" }}>
+                ← Home
+              </Link>
+              {loggedIn && (
+                <button onClick={logout} style={{ color: "#6B5C3A", fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", background: "transparent", border: "1px solid rgba(239,83,80,0.25)", borderRadius: 999, padding: "8px 16px", cursor: "pointer" }}>
+                  Logout
+                </button>
+              )}
+            </div>
           </div>
 
           {!loggedIn ? (
-            <div style={sectionStyle}>
-              <div style={{ fontSize: 13, color: "#6B5C3A", marginBottom: 18 }}>Enter your credentials to access the admin panel.</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 320 }}>
-                <div>
-                  <label style={labelStyle}>Username</label>
-                  <input style={inputStyle} placeholder="admin" value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === "Enter" && login()} />
+            /* ── LOGIN SCREEN ── */
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh" }}>
+              <div style={{ ...sectionStyle, width: "100%", maxWidth: 380 }}>
+                <div style={{ textAlign: "center", marginBottom: 24 }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>🔐</div>
+                  <div style={{ fontFamily: "var(--font-playfair,Georgia,serif)", fontSize: 18, fontWeight: 700, background: G, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Admin Login</div>
+                  <div style={{ fontSize: 11, color: "#4a3e28", marginTop: 4 }}>Gold Mania · Restricted Access</div>
                 </div>
-                <div>
-                  <label style={labelStyle}>Password</label>
-                  <input style={inputStyle} type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && login()} />
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  <div>
+                    <label style={labelStyle}>Username</label>
+                    <input style={inputStyle} placeholder="Enter username" value={username}
+                      onChange={e => { setUsername(e.target.value); setLoginError(""); }}
+                      onKeyDown={e => e.key === "Enter" && login()} autoComplete="username" />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Password</label>
+                    <div style={{ position: "relative" }}>
+                      <input style={{ ...inputStyle, paddingRight: 44 }} type={showPass ? "text" : "password"}
+                        placeholder="Enter password" value={password}
+                        onChange={e => { setPassword(e.target.value); setLoginError(""); }}
+                        onKeyDown={e => e.key === "Enter" && login()} autoComplete="current-password" />
+                      <button onClick={() => setShowPass(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#6B5C3A", cursor: "pointer", fontSize: 14, padding: 0 }}>
+                        {showPass ? "🙈" : "👁"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {loginError && (
+                    <div style={{ padding: "8px 12px", background: "rgba(239,83,80,0.1)", border: "1px solid rgba(239,83,80,0.25)", borderRadius: 8, fontSize: 12, color: "#ef5350" }}>
+                      {loginError}
+                    </div>
+                  )}
+
+                  <button style={{ ...btnGold, marginTop: 4, padding: "12px 22px", fontSize: 12 }} onClick={login}>
+                    Sign In →
+                  </button>
                 </div>
-                <button style={{ ...btnGold, marginTop: 6 }} onClick={login}>Sign In</button>
               </div>
             </div>
           ) : (
