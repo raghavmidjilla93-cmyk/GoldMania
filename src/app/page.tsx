@@ -12,6 +12,12 @@ type ApiData = {
   prices:    { gold: RateRow[]; silver: RateRow[] };
   prevPrices?: { gold: RateRow[]; silver: RateRow[] } | null;
 };
+type Purity = "24K" | "22K" | "18K";
+type Item = {
+  id: string; name: string; metal: "Gold" | "Silver";
+  purity?: Purity; weightGrams: number; image?: string; wastagePercent?: number;
+};
+const PURITY_RATIO: Record<Purity, number> = { "24K": 1, "22K": 22/24, "18K": 18/24 };
 type ManualRates = { gold24_10g:number; gold22_10g:number; gold18_10g:number; silver999_1kg:number };
 
 function formatINR(v: number) {
@@ -30,6 +36,7 @@ export default function Home() {
   const [data, setData]   = useState<ApiData|null>(null);
   const [error, setError] = useState("");
   const [manualActive, setManualActive] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
 
   function readManual(): ManualRates|null {
     if (typeof window==="undefined") return null;
@@ -69,6 +76,7 @@ export default function Home() {
 
   useEffect(()=>{
     loadRates();
+    fetch("/api/items",{cache:"no-store"}).then(r=>r.json()).then(setItems).catch(()=>{});
     const fn=()=>loadRates();
     window.addEventListener("rates-updated",fn);
     window.addEventListener("storage",fn);
@@ -88,6 +96,23 @@ export default function Home() {
   const rateDate   = data?.updatedAt ? new Date(data.updatedAt).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) : "—";
   const lastUpdate = data?.updatedAt ? new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : "—";
   const wa = siteConfig.whatsapp.replace(/\D/g,"");
+
+  function priceFor(it: Item): number {
+    if (it.metal === "Gold") {
+      const g24_10g = gold.find(r=>r.purity==="24K")?.amount ?? 0;
+      if (!g24_10g) return 0;
+      const ratio = PURITY_RATIO[it.purity ?? "22K"];
+      return Math.round((g24_10g / 10) * ratio * it.weightGrams * (1 + (it.wastagePercent ?? 0) / 100));
+    }
+    if (it.metal === "Silver") {
+      const s_kg = silver.find(r=>r.purity==="999")?.amount ?? 0;
+      if (!s_kg) return 0;
+      return Math.round((s_kg / 1000) * it.weightGrams * (1 + (it.wastagePercent ?? 0) / 100));
+    }
+    return 0;
+  }
+
+  const featuredItems = items.slice(0, 6);
 
   return (
     <>
@@ -259,77 +284,77 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── FEATURED COLLECTION ── */}
+        {/* ── FEATURED COLLECTION — admin items ── */}
         <section style={{ marginTop:44 }}>
           <div style={{ textAlign:"center", marginBottom:28 }}>
-            <p className="section-label">Handpicked For You</p>
-            <h2 className="section-title">Featured Collection</h2>
+            <p className="section-label">Our Collection</p>
+            <h2 className="section-title">Featured Jewellery</h2>
             <div className="gold-divider" style={{ maxWidth:220, margin:"10px auto 0" }}>
               <span className="gold-divider-icon">◆ ◆</span>
             </div>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,260px),1fr))", gap:16 }}>
 
-            {/* Card 1 */}
-            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
-              <div style={{ height:200, overflow:"hidden", position:"relative" }}>
-                <img src="/gold1.png" alt="24K Pure Gold" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.6s ease" }}
-                  onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1.06)"}
-                  onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1)"}
-                />
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg,rgba(5,5,3,0.7),transparent 55%)" }} />
-                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>24K · 999 PURITY</div>
-              </div>
-              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
-                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Pure Gold Collection</div>
-                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>BIS Hallmarked 24K gold bars and coins. Ideal for investment and gifting.</div>
-                <a href={`https://wa.me/${wa}?text=Hi, I'm interested in your 24K Pure Gold collection.`} target="_blank" rel="noreferrer"
-                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#128C7E,#25D366)", color:"#fff", textDecoration:"none", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
-                  ◆ WhatsApp Enquiry
-                </a>
-              </div>
-            </div>
+          {featuredItems.length === 0
+            ? <div style={{ textAlign:"center", padding:"40px 0", color:"#4a3e28", fontStyle:"italic", fontSize:13 }}>Loading collection…</div>
+            : (
+              <>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,240px),1fr))", gap:16 }}>
+                  {featuredItems.map(it => {
+                    const price = priceFor(it);
+                    const badge = it.metal === "Gold" ? (it.purity ?? "22K") : "Silver";
+                    const badgeColor = it.metal === "Gold" ? "#D4AF37" : "#A0A0A0";
+                    return (
+                      <div key={it.id} style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
+                        {/* Image */}
+                        <div style={{ height:200, overflow:"hidden", position:"relative", background:"linear-gradient(135deg,#1a1506,#0c0c0a)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {it.image
+                            ? <img src={it.image} alt={it.name} style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.5s ease" }}
+                                onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1.06)"}
+                                onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1)"}
+                              />
+                            : <div style={{ textAlign:"center" }}>
+                                <div style={{ fontSize:48, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>◈</div>
+                                <div style={{ fontSize:8, fontWeight:700, letterSpacing:"0.2em", color:"#3a3020", marginTop:6, textTransform:"uppercase" }}>{it.name}</div>
+                              </div>
+                          }
+                          <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg,rgba(5,5,3,0.65),transparent 55%)", pointerEvents:"none" }} />
+                          <div style={{ position:"absolute", top:10, left:10, padding:"3px 9px", borderRadius:999, background:"rgba(5,5,3,0.75)", border:`1px solid ${badgeColor}44`, fontSize:9, fontWeight:700, letterSpacing:"0.18em", color:badgeColor }}>
+                            {badge} · {it.metal.toUpperCase()}
+                          </div>
+                        </div>
 
-            {/* Card 2 */}
-            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
-              <div style={{ height:200, overflow:"hidden", position:"relative" }}>
-                <img src="/gold3.jpg" alt="Designer Jewellery" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.6s ease" }}
-                  onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1.06)"}
-                  onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform="scale(1)"}
-                />
-                <div style={{ position:"absolute", inset:0, background:"linear-gradient(0deg,rgba(5,5,3,0.7),transparent 55%)" }} />
-                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>22K · HALLMARKED</div>
-              </div>
-              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
-                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Designer Jewellery</div>
-                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>Handcrafted necklaces, bangles and bridal sets. 22K certified purity.</div>
-                <a href={`https://wa.me/${wa}?text=Hi, I'm interested in your Designer Jewellery collection.`} target="_blank" rel="noreferrer"
-                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#128C7E,#25D366)", color:"#fff", textDecoration:"none", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
-                  ◆ WhatsApp Enquiry
-                </a>
-              </div>
-            </div>
-
-            {/* Card 3 — Bespoke */}
-            <div style={{ background:"linear-gradient(160deg,#161409,#0c0c0a)", borderRadius:16, border:"1px solid rgba(212,175,55,0.12)", overflow:"hidden", display:"flex", flexDirection:"column" }}>
-              <div style={{ height:200, background:"linear-gradient(135deg,#1a1506,#0c0c0a)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
-                <div style={{ textAlign:"center" }}>
-                  <div style={{ fontSize:52, lineHeight:1, marginBottom:10, background:"linear-gradient(135deg,#8B6914,#D4AF37,#F0D060)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>◈</div>
-                  <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.28em", color:"#4a3e28", textTransform:"uppercase" }}>Your Vision · Our Craft</div>
+                        {/* Info */}
+                        <div style={{ padding:"16px 18px 18px", flex:1, display:"flex", flexDirection:"column", gap:7 }}>
+                          <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:16, fontWeight:700, color:"#C9A84C", letterSpacing:"0.03em", lineHeight:1.3 }}>{it.name}</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                            <span style={{ fontSize:10, color:"#4a3e28" }}>{it.weightGrams}g</span>
+                            {(it.wastagePercent ?? 0) > 0 && <span style={{ fontSize:10, color:"#3a3020" }}>+{it.wastagePercent}% wastage</span>}
+                            {price > 0 && (
+                              <span style={{ fontFamily:"system-ui,sans-serif", fontSize:14, fontWeight:700, color:"#D4AF37", marginLeft:"auto" }}>
+                                {formatINR(price)}
+                              </span>
+                            )}
+                          </div>
+                          <a href={`https://wa.me/${wa}?text=Hi, I'm interested in ${it.name} (${badge}, ${it.weightGrams}g). Please share details.`}
+                            target="_blank" rel="noreferrer"
+                            style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:5, padding:"8px 14px", borderRadius:999, background:"linear-gradient(135deg,#128C7E,#25D366)", color:"#fff", textDecoration:"none", fontSize:10, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
+                            ◆ Enquire on WhatsApp
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ position:"absolute", top:12, left:12, padding:"3px 10px", borderRadius:999, background:"rgba(5,5,3,0.7)", border:"1px solid rgba(212,175,55,0.3)", fontSize:9, fontWeight:700, letterSpacing:"0.2em", color:"#D4AF37" }}>BESPOKE · CUSTOM</div>
-              </div>
-              <div style={{ padding:"18px 20px 20px", flex:1, display:"flex", flexDirection:"column", gap:8 }}>
-                <div style={{ fontFamily:"var(--font-playfair,Georgia,serif)", fontSize:17, fontWeight:700, color:"#C9A84C", letterSpacing:"0.04em" }}>Custom Designs</div>
-                <div style={{ fontSize:12, color:"#5C5040", lineHeight:1.6 }}>Bring your dream jewellery to life. Bridal sets, rings, chains — any design, any purity.</div>
-                <a href={`https://wa.me/${wa}?text=Hi, I'd like a custom jewellery design quote.`} target="_blank" rel="noreferrer"
-                  style={{ marginTop:"auto", display:"inline-flex", alignItems:"center", gap:6, padding:"9px 16px", borderRadius:999, background:"linear-gradient(135deg,#8B6914,#D4AF37)", color:"#0a0806", textDecoration:"none", fontSize:11, fontWeight:800, letterSpacing:"0.08em", textTransform:"uppercase", width:"fit-content" }}>
-                  ◆ Get Free Quote
-                </a>
-              </div>
-            </div>
 
-          </div>
+                {/* View all button */}
+                <div style={{ textAlign:"center", marginTop:28 }}>
+                  <Link href="/shop" style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"12px 28px", borderRadius:999, background:"linear-gradient(135deg,#8B6914,#D4AF37)", color:"#0a0806", textDecoration:"none", fontSize:12, fontWeight:800, letterSpacing:"0.12em", textTransform:"uppercase" }}>
+                    View Full Collection →
+                  </Link>
+                </div>
+              </>
+            )
+          }
         </section>
 
         {/* ── TRUST STRIP ── */}
