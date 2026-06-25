@@ -36,7 +36,6 @@ export default function Header() {
   const nav = [
     { href: "/",        label: "Home" },
     { href: "/shop",    label: "Collection" },
-    { href: "/invoice", label: "Invoice" },
     { href: "/contact", label: "Contact" },
   ];
 
