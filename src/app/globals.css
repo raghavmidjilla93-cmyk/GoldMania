@@ -446,19 +446,56 @@ textarea.input { min-height:120px; resize:vertical; }
 .wa-float:hover { transform:scale(1.1) translateY(-3px); box-shadow:0 12px 36px rgba(37,211,102,0.5); }
 
 /* ── RESPONSIVE ───────────────────────────────────────────────────────────── */
+
+/* Tablet (≤ 900px) */
+@media (max-width: 900px) {
+  /* Admin: invoice form goes 2-column on tablet */
+  .inv-form-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .inv-form-name { grid-column: 1 / -1; }
+  .inv-form-btn  { grid-column: 1 / -1; }
+}
+
+/* Mobile (≤ 640px) */
 @media (max-width: 640px) {
   :root { --px: 14px; }
   .container { padding:0 var(--px) 64px; }
+
+  /* Rate cards */
   .rate-cards { grid-template-columns:1fr 1fr; gap:10px; padding:12px; }
   .rate-card  { padding:16px 12px; }
   .rate-card-purity { font-size:22px; }
   .rate-card-price  { font-size:18px !important; }
+
+  /* Grids */
   .collection-grid  { grid-template-columns:1fr; }
   .feature-grid     { grid-template-columns:repeat(2,1fr); }
   .page-nav a       { font-size:9px; padding:6px 10px; }
+
+  /* Admin */
+  .admin-rate-grid  { grid-template-columns: 1fr !important; }
+  .admin-item-grid  { grid-template-columns: 1fr !important; }
+  .admin-purity-grid { grid-template-columns: repeat(auto-fit, minmax(90px,1fr)) !important; }
+
+  /* Invoice */
+  .inv-form-grid    { grid-template-columns: 1fr !important; }
+  .inv-form-name,
+  .inv-form-btn     { grid-column: 1 !important; }
+  .inv-customer-grid { grid-template-columns: 1fr !important; }
+
+  /* Shop */
+  .shop-header      { flex-direction: column !important; align-items: flex-start !important; }
+  .shop-rate-bar    { gap: 6px !important; }
+  .shop-rate-pill   { padding: 6px 10px !important; }
+
+  /* Subscribe form */
+  .subscribe-form { grid-template-columns: 1fr; }
 }
 
+/* Small phone (≤ 380px) */
 @media (max-width: 380px) {
-  .rate-cards { grid-template-columns:1fr; }
+  .rate-cards   { grid-template-columns:1fr; }
   .feature-grid { grid-template-columns:1fr; }
+  .admin-purity-grid { grid-template-columns: 1fr 1fr !important; }
 }

@@ -258,6 +258,14 @@ export default function AdminPage() {
   return (
     <>
       <Header />
+      <style>{`
+        @media (max-width: 600px) {
+          .admin-rate-grid   { grid-template-columns: 1fr !important; }
+          .admin-purity-grid { grid-template-columns: repeat(auto-fit, minmax(90px,1fr)) !important; }
+          .admin-item-grid   { grid-template-columns: 1fr !important; }
+          .admin-item-grid > div { grid-column: 1 !important; }
+        }
+      `}</style>
 
       <div style={{ background: "#050503", minHeight: "100vh", fontFamily: "system-ui,sans-serif", padding: "0 0 60px" }}>
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "28px 18px 0" }}>
@@ -338,7 +346,7 @@ export default function AdminPage() {
                 </div>
 
                 {/* 24K input */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+                <div className="admin-rate-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
                   <div>
                     <label style={labelStyle}>24K Gold — ₹ per 10g</label>
                     <input style={inputStyle} type="number" placeholder="e.g. 156250" value={gold24Input}
@@ -353,7 +361,7 @@ export default function AdminPage() {
 
                 {/* Auto-computed preview */}
                 {g24 > 0 && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
+                  <div className="admin-purity-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 16 }}>
                     {[
                       { label: "24K / 10g", val: g24, sub: "99.9%" },
                       { label: "22K / 10g", val: g22, sub: "91.6% (auto)" },
@@ -384,7 +392,7 @@ export default function AdminPage() {
               <div style={sectionStyle}>
                 <div style={{ fontFamily: "var(--font-playfair,Georgia,serif)", fontSize: 15, fontWeight: 700, color: "#C9A84C", marginBottom: 18 }}>Add Product</div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="admin-item-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div style={{ gridColumn: "1 / -1" }}>
                     <label style={labelStyle}>Product Name</label>
                     <input style={inputStyle} placeholder="e.g. Temple Necklace" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />

@@ -157,6 +157,14 @@ export default function ShopPage() {
         .cart-btn-add:hover { opacity:.88; transform:translateY(-1px); }
         .shop-card:hover { border-color:rgba(212,175,55,0.28) !important; }
         .shop-card:hover .shop-card-img { transform:scale(1.04); }
+        @media (max-width: 600px) {
+          .shop-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .shop-header-right { width: 100%; justify-content: space-between !important; }
+          .shop-rate-bar { gap: 6px !important; }
+          .shop-rate-pill { padding: 6px 10px !important; }
+          .shop-rate-pill span { font-size: 12px !important; }
+          .shop-filter-bar { flex-wrap: wrap !important; }
+        }
       `}</style>
 
       {/* Cart backdrop */}
@@ -246,13 +254,13 @@ export default function ShopPage() {
         <div style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 18px 80px" }}>
 
           {/* Page header */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 28 }}>
+          <div className="shop-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 28 }}>
             <div>
               <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#6B5C3A", marginBottom: 4 }}>Handpicked For You</div>
               <div style={{ fontFamily: "var(--font-playfair,Georgia,serif)", fontSize: 26, fontWeight: 900, background: G, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Our Collection</div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="shop-header-right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Link href="/" style={{ fontSize: 10, color: "#6B5C3A", textDecoration: "none", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", border: "1px solid rgba(212,175,55,0.15)", borderRadius: 999, padding: "7px 14px" }}>
                 ← Home
               </Link>
@@ -268,13 +276,13 @@ export default function ShopPage() {
 
           {/* Live rate info bar */}
           {gold24_10g > 0 && (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
+            <div className="shop-rate-bar" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 24 }}>
               {[
                 { label: "24K / 1g", val: gold24_10g / 10 },
                 { label: "22K / 1g", val: gold24_10g / 10 * 22 / 24 },
                 { label: "18K / 1g", val: gold24_10g / 10 * 18 / 24 },
               ].map(r => (
-                <div key={r.label} style={{ background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.12)", borderRadius: 8, padding: "8px 14px", display: "flex", alignItems: "baseline", gap: 8 }}>
+                <div key={r.label} className="shop-rate-pill" style={{ background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.12)", borderRadius: 8, padding: "8px 14px", display: "flex", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#6B5C3A" }}>{r.label}</span>
                   <span style={{ fontSize: 14, fontWeight: 800, color: "#D4AF37" }}>{formatINR(Math.round(r.val))}</span>
                 </div>

@@ -215,8 +215,24 @@ export default function InvoicePage() {
     <>
       <Header />
 
-      {/* Print-only styles */}
+      {/* Responsive + print styles */}
       <style>{`
+        .inv-form-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+          gap: 12px;
+          align-items: flex-end;
+        }
+        @media (max-width: 900px) {
+          .inv-form-grid { grid-template-columns: 1fr 1fr; }
+          .inv-form-name { grid-column: 1 / -1; }
+          .inv-form-btn  { grid-column: 1 / -1; }
+          .inv-customer-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 540px) {
+          .inv-form-grid { grid-template-columns: 1fr; }
+          .inv-form-name, .inv-form-btn { grid-column: 1; }
+        }
         @media print {
           body { background: #fff !important; }
           .no-print { display: none !important; }
@@ -261,7 +277,7 @@ export default function InvoicePage() {
           {/* Customer details */}
           <div style={{ background: "linear-gradient(160deg,#161409,#0c0c0a)", border: "1px solid rgba(212,175,55,0.14)", borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6B5C3A", marginBottom: 14 }}>◆ Customer Details (optional)</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="inv-customer-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div>
                 <label style={labelStyle}>Customer Name</label>
                 <input className="inv-input" style={inputStyle} placeholder="e.g. Priya Sharma" value={customerName} onChange={e => setCN(e.target.value)} />
@@ -276,8 +292,8 @@ export default function InvoicePage() {
           {/* Add item form */}
           <div style={{ background: "linear-gradient(160deg,#161409,#0c0c0a)", border: "1px solid rgba(212,175,55,0.14)", borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6B5C3A", marginBottom: 14 }}>◆ Add Item</div>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
-              <div>
+            <div className="inv-form-grid">
+              <div className="inv-form-name">
                 <label style={labelStyle}>Item Name</label>
                 <input className="inv-input" style={inputStyle} placeholder="e.g. Necklace, Ring…" value={fName} onChange={e => setFName(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && addLine()} />
@@ -308,9 +324,11 @@ export default function InvoicePage() {
                 <input className="inv-input" style={inputStyle} type="number" min="0" step="0.5" placeholder="e.g. 3" value={fWastage}
                   onChange={e => setFWastage(e.target.value)} onKeyDown={e => e.key === "Enter" && addLine()} />
               </div>
-              <button onClick={addLine} style={{ padding: "9px 20px", borderRadius: 8, background: "linear-gradient(135deg,#8B6914,#D4AF37)", color: "#0a0806", border: "none", fontWeight: 800, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: "0.05em" }}>
-                + Add
-              </button>
+              <div className="inv-form-btn">
+                <button onClick={addLine} style={{ width: "100%", padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg,#8B6914,#D4AF37)", color: "#0a0806", border: "none", fontWeight: 800, fontSize: 14, cursor: "pointer", letterSpacing: "0.05em", minHeight: 44 }}>
+                  + Add Item
+                </button>
+              </div>
             </div>
 
             {/* Live preview of current item */}
