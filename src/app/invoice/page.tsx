@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Header from "@/components/Header";
 import { siteConfig } from "@/config/siteConfig";
+
+const SESSION_KEY = "gm_admin_session";
+const ADMIN_USER  = "admin";
+const ADMIN_PASS  = "GoldMania@2025";
 
 type Metal  = "Gold" | "Silver";
 type Purity = "24K" | "22K" | "18K";
@@ -29,6 +33,28 @@ function invoiceNo() {
 }
 
 export default function InvoicePage() {
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  const [authed,     setAuthed]     = useState(false);
+  const [loginUser,  setLoginUser]  = useState("");
+  const [loginPass,  setLoginPass]  = useState("");
+  const [showPass,   setShowPass]   = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  useEffect(() => {
+    if (sessionStorage.getItem(SESSION_KEY) === "1") setAuthed(true);
+  }, []);
+
+  function doLogin() {
+    if (loginUser.trim() === ADMIN_USER && loginPass === ADMIN_PASS) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      setAuthed(true);
+      setLoginError("");
+    } else {
+      setLoginError("Incorrect username or password.");
+      setLoginPass("");
+    }
+  }
+
   // ── Live rates ──────────────────────────────────────────────────────────────
   const [gold24PerGram,  setGold24PerGram]  = useState(0);
   const [silverPerGram,  setSilverPerGram]  = useState(0);
@@ -132,12 +158,81 @@ export default function InvoicePage() {
   };
   const selectStyle: React.CSSProperties = { ...inputStyle, cursor: "pointer" };
 
+  // ── Login gate ───────────────────────────────────────────────────────────────
+  if (!authed) {
+    const G = "linear-gradient(135deg,#8B6914,#D4AF37,#F0D060,#C9A84C)";
+    const iStyle: React.CSSProperties = {
+      width: "100%", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(212,175,55,0.2)",
+      borderRadius: 8, color: "#e8dfc8", padding: "10px 14px", fontSize: 13, outline: "none",
+      boxSizing: "border-box",
+    };
+    return (
+      <>
+        <Header />
+        <div style={{ background: "#050503", minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "linear-gradient(160deg,#161409,#0c0c0a)", border: "1px solid rgba(212,175,55,0.14)", borderRadius: 16, padding: "32px 28px", width: "100%", maxWidth: 360 }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ fontSize: 34, marginBottom: 10 }}>🔐</div>
+              <div style={{ fontFamily: "Georgia,serif", fontSize: 18, fontWeight: 700, background: G, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Admin Only</div>
+              <div style={{ fontSize: 11, color: "#4a3e28", marginTop: 4 }}>Invoice Generator · Gold Mania</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "#6B5C3A", display: "block", marginBottom: 5 }}>Username</label>
+                <input style={iStyle} placeholder="Enter username" value={loginUser}
+                  onChange={e => { setLoginUser(e.target.value); setLoginError(""); }}
+                  onKeyDown={e => e.key === "Enter" && doLogin()} autoComplete="username" />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: "#6B5C3A", display: "block", marginBottom: 5 }}>Password</label>
+                <div style={{ position: "relative" }}>
+                  <input style={{ ...iStyle, paddingRight: 44 }} type={showPass ? "text" : "password"}
+                    placeholder="Enter password" value={loginPass}
+                    onChange={e => { setLoginPass(e.target.value); setLoginError(""); }}
+                    onKeyDown={e => e.key === "Enter" && doLogin()} autoComplete="current-password" />
+                  <button onClick={() => setShowPass(p => !p)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", color: "#6B5C3A", cursor: "pointer", fontSize: 14, padding: 0 }}>
+                    {showPass ? "🙈" : "👁"}
+                  </button>
+                </div>
+              </div>
+              {loginError && (
+                <div style={{ padding: "8px 12px", background: "rgba(239,83,80,0.1)", border: "1px solid rgba(239,83,80,0.25)", borderRadius: 8, fontSize: 12, color: "#ef5350" }}>
+                  {loginError}
+                </div>
+              )}
+              <button onClick={doLogin}
+                style={{ background: G, color: "#0a0806", border: "none", borderRadius: 999, padding: "12px 22px", fontWeight: 800, fontSize: 12, letterSpacing: "0.12em", textTransform: "uppercase", cursor: "pointer", marginTop: 4 }}>
+                Sign In →
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <Header />
 
-      {/* Print-only styles */}
+      {/* Responsive + print styles */}
       <style>{`
+        .inv-form-grid {
+          display: grid;
+          grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+          gap: 12px;
+          align-items: flex-end;
+        }
+        @media (max-width: 900px) {
+          .inv-form-grid { grid-template-columns: 1fr 1fr; }
+          .inv-form-name { grid-column: 1 / -1; }
+          .inv-form-btn  { grid-column: 1 / -1; }
+          .inv-customer-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 540px) {
+          .inv-form-grid { grid-template-columns: 1fr; }
+          .inv-form-name, .inv-form-btn { grid-column: 1; }
+        }
         @media print {
           body { background: #fff !important; }
           .no-print { display: none !important; }
@@ -182,7 +277,7 @@ export default function InvoicePage() {
           {/* Customer details */}
           <div style={{ background: "linear-gradient(160deg,#161409,#0c0c0a)", border: "1px solid rgba(212,175,55,0.14)", borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6B5C3A", marginBottom: 14 }}>◆ Customer Details (optional)</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+            <div className="inv-customer-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               <div>
                 <label style={labelStyle}>Customer Name</label>
                 <input className="inv-input" style={inputStyle} placeholder="e.g. Priya Sharma" value={customerName} onChange={e => setCN(e.target.value)} />
@@ -197,8 +292,8 @@ export default function InvoicePage() {
           {/* Add item form */}
           <div style={{ background: "linear-gradient(160deg,#161409,#0c0c0a)", border: "1px solid rgba(212,175,55,0.14)", borderRadius: 14, padding: "20px 22px", marginBottom: 18 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "#6B5C3A", marginBottom: 14 }}>◆ Add Item</div>
-            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
-              <div>
+            <div className="inv-form-grid">
+              <div className="inv-form-name">
                 <label style={labelStyle}>Item Name</label>
                 <input className="inv-input" style={inputStyle} placeholder="e.g. Necklace, Ring…" value={fName} onChange={e => setFName(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && addLine()} />
@@ -229,9 +324,11 @@ export default function InvoicePage() {
                 <input className="inv-input" style={inputStyle} type="number" min="0" step="0.5" placeholder="e.g. 3" value={fWastage}
                   onChange={e => setFWastage(e.target.value)} onKeyDown={e => e.key === "Enter" && addLine()} />
               </div>
-              <button onClick={addLine} style={{ padding: "9px 20px", borderRadius: 8, background: "linear-gradient(135deg,#8B6914,#D4AF37)", color: "#0a0806", border: "none", fontWeight: 800, fontSize: 14, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: "0.05em" }}>
-                + Add
-              </button>
+              <div className="inv-form-btn">
+                <button onClick={addLine} style={{ width: "100%", padding: "10px 20px", borderRadius: 8, background: "linear-gradient(135deg,#8B6914,#D4AF37)", color: "#0a0806", border: "none", fontWeight: 800, fontSize: 14, cursor: "pointer", letterSpacing: "0.05em", minHeight: 44 }}>
+                  + Add Item
+                </button>
+              </div>
             </div>
 
             {/* Live preview of current item */}
