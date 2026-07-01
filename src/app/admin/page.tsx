@@ -341,8 +341,17 @@ export default function AdminPage() {
                   {manualRates && <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "rgba(212,175,55,0.15)", color: "#D4AF37", padding: "3px 10px", borderRadius: 999 }}>Active</span>}
                 </div>
 
-                <div style={{ fontSize: 11, color: "#5C5040", marginBottom: 16, lineHeight: 1.6 }}>
+                <div style={{ fontSize: 11, color: "#5C5040", marginBottom: 12, lineHeight: 1.6 }}>
                   Enter the 24K rate per 10g. 22K and 18K are auto-calculated from purity percentage.
+                </div>
+                <div style={{ marginBottom: 16, padding: "10px 14px", background: "rgba(255,165,0,0.06)", border: "1px solid rgba(255,165,0,0.18)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: "#a07020" }}>
+                    ⚠ If the live rate doesn't match dpgold.com — enter it manually here
+                  </span>
+                  <a href="https://www.dpgold.com/" target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, fontWeight: 700, color: "#D4AF37", textDecoration: "none", border: "1px solid rgba(212,175,55,0.3)", borderRadius: 999, padding: "4px 12px", whiteSpace: "nowrap" }}>
+                    Open dpgold.com ↗
+                  </a>
                 </div>
 
                 {/* 24K input */}

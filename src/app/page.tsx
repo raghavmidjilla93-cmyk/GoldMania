@@ -8,7 +8,7 @@ import { siteConfig } from "@/config/siteConfig";
 
 type RateRow   = { purity: string; amount: number };
 type ApiData = {
-  updatedAt: string; city?: string; note?: string; source?: string;
+  updatedAt: string; city?: string; note?: string; source?: string; sourceWarning?: string;
   prices:    { gold: RateRow[]; silver: RateRow[] };
   prevPrices?: { gold: RateRow[]; silver: RateRow[] } | null;
 };
@@ -258,7 +258,15 @@ export default function Home() {
             {/* Footnote */}
             <div style={{ padding:"6px 14px", borderTop:"1px solid rgba(212,175,55,0.07)", background:"rgba(212,175,55,0.02)" }}>
               <span style={{ fontSize:8, color:"#2d2619", fontStyle:"italic" }}>Gold per 1g · Silver per 10g · Without GST · Add 3% for counter price</span>
+              {data?.source && <span style={{ fontSize:8, color:"#2d2619" }}> · {data.source}</span>}
             </div>
+
+            {/* Source warning — shown when using IBJA/fallback instead of dpgold */}
+            {data?.sourceWarning && (
+              <div style={{ padding:"8px 14px", background:"rgba(255,165,0,0.07)", borderTop:"1px solid rgba(255,165,0,0.15)" }}>
+                <span style={{ fontSize:9, color:"#a07020" }}>⚠ {data.sourceWarning}</span>
+              </div>
+            )}
           </div>
 
         </div>
@@ -382,7 +390,7 @@ export default function Home() {
             Rates are sourced from IBJA (India Bullion &amp; Jewellers Association) with a Hyderabad local premium applied to match Sri Krishna &amp; Vardhaman Jewellers pricing.
             Gold is displayed <strong style={{ color:"var(--gold)" }}>per 1 gram</strong>, silver <strong style={{ color:"#C0C0C0" }}>per 10 grams</strong> — both <strong>without GST</strong> and without making charges.
             Add 3% GST for the final counter price.
-            {data?.source && <> Source: <em style={{ color:"var(--fg-subtle)" }}>{data.source}</em>.</>}
+            {data?.source && <> Rates sourced from <em style={{ color:"var(--fg-subtle)" }}>{data.source}</em>.</>}
           </p>
         </section>
 
